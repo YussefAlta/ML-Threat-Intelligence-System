@@ -60,7 +60,7 @@ class WebScraper(BaseScraper):
     Universal web scraper using Firecrawl API
     - Handles JavaScript-heavy sites
     - Extracts structured content
-    - Supports both URL scraping and search
+    - Supports URL scraping 
     """
 ```
 
@@ -68,7 +68,7 @@ class WebScraper(BaseScraper):
 - **Firecrawl Integration**: Professional web scraping API
 - **Content Parsing**: Extracts title, content, author, publication date
 - **Keyword Extraction**: Automatically identifies important terms
-- **Link Following**: Can follow links to extract additional context
+- **Link Following**: Can follow links to extract additional context (from social feeds such as x/twitter)
 - **Metadata Extraction**: Pulls structured data from web pages
 
 #### **Data Structure Improvements**
@@ -136,23 +136,17 @@ class WebScraper(BaseScraper):
 #### **Immediate Priorities**
 1. **Test with more content sources**: Validate the web scraper with various types of websites
 2. **Optimize performance**: Fine-tune scraping speed and efficiency
-3. **Add content filtering**: Implement filters for relevant threat intelligence content
-
-#### **Medium-term Goals**
-1. **Enhanced search capabilities**: Improve the search functionality for finding relevant content
-2. **Content classification**: Add automatic categorization of scraped content
-3. **Real-time monitoring**: Set up continuous monitoring of key threat intelligence sources
+3. **Pre-processing script**: Clean, filter, and de-dupe raw matadata.
 
 #### **Long-term Vision**
 1. **AI-powered content analysis**: Use machine learning to identify and prioritize threat intelligence
 2. **Automated reporting**: Generate automated threat intelligence reports
-3. **Integration with security tools**: Connect with existing security infrastructure
 
 ---
 
 ### 🏆 **Key Achievements Summary**
 
-✅ **Built a universal web scraper** that works with any website  
+✅ **Built a web scraper** that works with blogs/newsletters  
 ✅ **Solved complex technical challenges** with modern web scraping  
 ✅ **Cleaned up the entire codebase** for better maintainability  
 ✅ **Successfully tested** with real-world threat intelligence content  
@@ -161,22 +155,10 @@ class WebScraper(BaseScraper):
 
 ---
 
-### 💡 **Lessons Learned**
-
-1. **Adaptability is key**: When one approach doesn't work, pivot to better solutions
-2. **Professional tools matter**: Using services like Firecrawl saves time and provides better results
-3. **Clean code is maintainable code**: Regular cleanup prevents technical debt
-4. **Real-world testing is crucial**: Always test with actual content to validate functionality
-5. **Documentation helps everyone**: Clear documentation helps both technical and non-technical team members
-
----
-
 ### 📞 **For Non-Technical Stakeholders**
 
-**In simple terms**: We made our threat intelligence system much more powerful today. Instead of only being able to gather information from Twitter and Reddit, we can now collect intelligence from any website, blog, or news source on the internet. This means we can gather much more comprehensive threat intelligence data, which will help us better understand and respond to cybersecurity threats.
-
-**The bottom line**: Our system is now more capable, more reliable, and ready to handle the complex world of modern web content. This puts us in a much better position to gather the intelligence we need to protect against cyber threats.
+**In simple terms**: We made our threat intelligence system much more powerful today. Instead of only being able to gather information from we can now collect intelligence from any blog/newsletter website on the internet. This means we can gather comprehensive threat intelligence data, which will help us better understand and respond to cybersecurity threats.
 
 ---
 
-*This development log was created on October 6, 2025, documenting a major enhancement to the ML Threat Intelligence System.*
+*This development log was created on October 6, 2025.*
