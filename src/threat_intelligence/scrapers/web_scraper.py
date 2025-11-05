@@ -3,7 +3,7 @@ General web scraper for blogs, news articles, and other web content using Firecr
 """
 import re
 import json
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 from urllib.parse import urlparse, urljoin
 import logging
 from datetime import datetime
@@ -18,9 +18,17 @@ class WebScraper(BaseScraper):
     General web scraper for blogs, news articles, and other web content using Firecrawl API.
     """
     
-    def __init__(self, config):
+    def __init__(self, config, storage=None):
+        """
+        Initialize WebScraper.
+        
+        Args:
+            config: Configuration object
+            storage: Optional DataStorage instance for direct S3 uploads
+        """
         super().__init__(config)
         self.firecrawl = self._initialize_firecrawl()
+        self.storage = storage
     
     def _initialize_firecrawl(self):
         """Initialize Firecrawl API client."""
@@ -42,13 +50,14 @@ class WebScraper(BaseScraper):
             logger.error(f"Failed to initialize Firecrawl API: {str(e)}")
             return None
     
-    def scrape_posts(self, source: str, max_posts: int = None) -> List[Dict]:
+    def scrape_posts(self, source: str, max_posts: int = None, save_to_s3: bool = True) -> List[Dict]:
         """
         Scrape content from a web URL or search for content.
         
         Args:
             source: URL to scrape or search query
             max_posts: Maximum number of posts to scrape (not used for single URL)
+            save_to_s3: Whether to automatically save raw metadata to S3 (default: True)
         
         Returns:
             List of scraped content dictionaries
@@ -59,10 +68,28 @@ class WebScraper(BaseScraper):
         
         # Check if source is a URL
         if self.is_valid_url(source):
-            return self._scrape_from_url(source)
+            posts = self._scrape_from_url(source)
         else:
-            # Treat as search query
-            return self._search_content(source, max_posts or 10)
+            # Treat as search query - Firecrawl doesn't support search, so return empty
+            logger.warning(f"Source '{source}' is not a valid URL. WebScraper only supports URL-based scraping.")
+            posts = []
+        
+        # Save full raw data directly to S3 if storage is available and save_to_s3 is True
+        if posts and save_to_s3 and self.storage:
+            try:
+                # Save full raw post data (not just metadata subset)
+                s3_key = self.storage.save_posts_to_s3_direct(
+                    posts, 
+                    source, 
+                    data_type="raw_data",
+                    save_local=False
+                )
+                if s3_key:
+                    logger.info(f"Raw data saved directly to S3: {s3_key}")
+            except Exception as e:
+                logger.error(f"Failed to save raw data to S3: {str(e)}")
+        
+        return posts
     
     def _scrape_from_url(self, url: str) -> List[Dict]:
         """Scrape content from a specific URL using Firecrawl API."""
@@ -124,7 +151,7 @@ class WebScraper(BaseScraper):
             description = metadata.get('description', '')
             
             # Extract keywords and tags
-            keywords = self._extract_keywords(content_text)
+            keywords, word_frequency = self._extract_keywords(content_text)
             
             # Create structured content with maximum raw data preservation
             content_data = {
@@ -144,7 +171,7 @@ class WebScraper(BaseScraper):
                     'markdown': markdown_content,  # Original markdown
                     'html': html_content,          # Original HTML
                     'raw_text': markdown_content or html_content,  # Completely unprocessed text
-                    'word_frequency': dict(keywords),  # Word frequency data
+                    'word_frequency': word_frequency,  # Word frequency data
                     'total_words': len(keywords),
                     'unique_words': len(set(keywords))
                 },
@@ -211,10 +238,10 @@ class WebScraper(BaseScraper):
         
         return metadata
     
-    def _extract_keywords(self, content: str) -> List[str]:
+    def _extract_keywords(self, content: str) -> Tuple[List[str], Dict[str, int]]:
         """Extract all words from content for raw data collection (no stop word filtering)."""
         if not content:
-            return []
+            return [], {}
         
         # Extract all words (including stop words) for raw data collection
         words = re.findall(r'\b[a-zA-Z]+\b', content.lower())
@@ -224,11 +251,12 @@ class WebScraper(BaseScraper):
         for word in words:
             word_count[word] = word_count.get(word, 0) + 1
         
-        # Return all words with their frequency (no filtering)
+        # Return both the list of words and the frequency dictionary
         # This preserves all raw data for later preprocessing
         all_words = sorted(word_count.items(), key=lambda x: x[1], reverse=True)
+        word_list = [word for word, count in all_words]
         
-        return [word for word, count in all_words]
+        return word_list, word_count
     
     def _clean_content(self, content: str) -> str:
         """Minimal content cleaning to preserve raw data for preprocessing."""
@@ -266,7 +294,38 @@ class WebScraper(BaseScraper):
         
         return links
     
-    def scrape_article(self, url: str) -> Optional[Dict]:
+    def scrape_article(self, url: str, save_to_s3: bool = True) -> Optional[Dict]:
         """Scrape a single article from URL."""
         results = self._scrape_from_url(url)
+        
+        # Save full raw data directly to S3 if storage is available
+        if results and save_to_s3 and self.storage:
+            try:
+                s3_key = self.storage.save_posts_to_s3_direct(
+                    results,
+                    url,
+                    data_type="raw_data",
+                    save_local=False
+                )
+                if s3_key:
+                    logger.info(f"Raw data saved directly to S3: {s3_key}")
+            except Exception as e:
+                logger.error(f"Failed to save raw data to S3: {str(e)}")
+        
         return results[0] if results else None
+    
+    def _extract_raw_metadata(self, post: Dict) -> Dict:
+        """
+        Extract raw metadata from a post for S3 storage.
+        This preserves all raw data including HTML, markdown, and metadata.
+        """
+        return {
+            'id': post.get('id'),
+            'url': post.get('url'),
+            'title': post.get('title'),
+            'scraped_at': post.get('scraped_at'),
+            'domain': post.get('domain'),
+            'raw_content': post.get('raw_content', {}),
+            'metadata': post.get('metadata', {}),
+            'preprocessing_notes': post.get('preprocessing_notes', {})
+        }

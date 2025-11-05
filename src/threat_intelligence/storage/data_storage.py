@@ -77,6 +77,67 @@ class DataStorage:
         """Save linked content data to storage."""
         return self.save_posts(linked_content, source, "linked_content")
     
+    def save_posts_to_s3_direct(self, posts: List[Dict], source: str, data_type: str = "posts", save_local: bool = False) -> Optional[str]:
+        """
+        Save posts directly to S3 without requiring local file creation first.
+        
+        Args:
+            posts: List of post dictionaries to save
+            source: Source identifier for the data
+            data_type: Type of data (e.g., "posts", "linked_content", "raw_metadata")
+            save_local: Whether to also save locally (default: False)
+        
+        Returns:
+            S3 key path if successful, None otherwise
+        """
+        if not self.s3_client:
+            logger.warning("S3 client not available, cannot save directly to S3")
+            if save_local:
+                return self.save_posts(posts, source, data_type)
+            return None
+        
+        try:
+            # Sanitize source name for filename
+            import re
+            safe_source = re.sub(r'[^\w\-_\.]', '_', source)
+            safe_source = safe_source[:50]  # Limit length
+            
+            # Generate filename
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"{safe_source}_{data_type}_{timestamp}.json"
+            
+            # Convert posts to JSON string
+            json_data = json.dumps(posts, indent=2, ensure_ascii=False)
+            
+            # Upload directly to S3 - save directly under raw_data/ (no subfolders)
+            s3_key = f"raw_data/{filename}"
+            self.s3_client.put_object(
+                Bucket=self.config.S3_BUCKET_NAME,
+                Key=s3_key,
+                Body=json_data.encode('utf-8'),
+                ContentType='application/json'
+            )
+            
+            logger.info(f"Uploaded {len(posts)} {data_type} directly to S3: s3://{self.config.S3_BUCKET_NAME}/{s3_key}")
+            
+            # Optionally save locally as well
+            if save_local:
+                os.makedirs(self.config.RAW_DATA_DIR, exist_ok=True)
+                local_filepath = os.path.join(self.config.RAW_DATA_DIR, filename)
+                with open(local_filepath, 'w', encoding='utf-8') as f:
+                    f.write(json_data)
+                logger.info(f"Also saved locally to {local_filepath}")
+            
+            return s3_key
+            
+        except Exception as e:
+            logger.error(f"Failed to upload directly to S3: {str(e)}")
+            # Fallback to local save if S3 fails
+            if save_local:
+                logger.info("Falling back to local storage")
+                return self.save_posts(posts, source, data_type)
+            return None
+    
     def load_posts(self, filepath: str) -> List[Dict]:
         """Load posts from a JSON file."""
         try:

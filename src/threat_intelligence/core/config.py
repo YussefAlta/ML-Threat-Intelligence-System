@@ -4,11 +4,15 @@ Configuration management for the threat intelligence webscraper.
 import os
 from dotenv import load_dotenv
 
-# Load environment variables
-load_dotenv()
+# Load environment variables from .env and .env.local files
+load_dotenv()  # Loads .env
+load_dotenv('.env.local')  # Loads .env.local (overrides .env)
 
 class Config:
     """Configuration class for the webscraper."""
+    
+    # Main API Key
+    API_KEY = os.getenv('API_KEY')
     
     # Reddit API Configuration
     REDDIT_CLIENT_ID = os.getenv('REDDIT_CLIENT_ID')

@@ -32,7 +32,8 @@ class ThreatIntelligenceScraper:
             elif platform == 'reddit':
                 self.scrapers[platform] = RedditScraper(self.config)
             elif platform == 'web':
-                self.scrapers[platform] = WebScraper(self.config)
+                # Pass storage instance to WebScraper for direct S3 uploads
+                self.scrapers[platform] = WebScraper(self.config, storage=self.storage)
             else:
                 raise ValueError(f"Unsupported platform: {platform}")
         
@@ -65,11 +66,18 @@ class ThreatIntelligenceScraper:
             linked_content = scraper.follow_links(unique_links, self.config.MAX_LINK_DEPTH)
             logger.info(f"Extracted content from {len(linked_content)} linked pages")
         
-        # Save data
-        posts_file = self.storage.save_posts(posts, f"{platform}_{source}", "posts")
+        # Save data (only save locally, raw data already saved to S3 by scraper)
+        posts_file = None
         linked_file = None
-        if linked_content:
-            linked_file = self.storage.save_linked_content(linked_content, f"{platform}_{source}")
+        # Only save locally for backup - raw data is already in S3
+        if platform == 'web':
+            # Web scraper already saved raw data to S3, skip processed data saving
+            logger.info("Raw data already saved to S3 by web scraper, skipping processed data save")
+        else:
+            # For other platforms, save locally
+            posts_file = self.storage.save_posts(posts, f"{platform}_{source}", "posts")
+            if linked_content:
+                linked_file = self.storage.save_linked_content(linked_content, f"{platform}_{source}")
         
         return {
             'posts': posts,
