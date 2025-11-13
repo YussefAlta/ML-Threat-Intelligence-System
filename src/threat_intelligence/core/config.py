@@ -22,6 +22,15 @@ class Config:
     # Firecrawl API Configuration (for Twitter/X scraping)
     FIRECRAWL_API_KEY = os.getenv('FIRECRAWL_API_KEY', 'FIRECRAWL_API_KEY_REDACTED')
     
+    # NIST API Configuration
+    NIST_API_KEY = os.getenv('NIST_API_KEY')
+    NIST_API_BASE_URL = os.getenv('NIST_API_BASE_URL', 'https://services.nvd.nist.gov/rest/json/')
+    NIST_RATE_LIMIT_REQUESTS = int(os.getenv('NIST_RATE_LIMIT_REQUESTS', '5'))  # Requests per window
+    NIST_RATE_LIMIT_WINDOW = int(os.getenv('NIST_RATE_LIMIT_WINDOW', '30'))  # Seconds
+    NIST_MAX_RETRIES = int(os.getenv('NIST_MAX_RETRIES', '5'))
+    NIST_RETRY_BACKOFF = float(os.getenv('NIST_RETRY_BACKOFF', '2.0'))  # Exponential backoff multiplier
+    NIST_RESULTS_PER_PAGE = int(os.getenv('NIST_RESULTS_PER_PAGE', '2000'))  # Max is 2000, default 2000 (best practice)
+    
     # AWS S3 Configuration
     AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
     AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')

@@ -198,3 +198,175 @@ class DataStorage:
                 logger.error(f"Error processing file {filepath}: {str(e)}")
         
         return summary
+    
+    def save_cve_data(self, cve_records: List[Dict], date_filter: Optional[str] = None, save_local: bool = True) -> Optional[str]:
+        """
+        Save CVE data to S3 with proper organization.
+        
+        Args:
+            cve_records: List of CVE vulnerability records
+            date_filter: Optional date filter string (YYYY-MM-DD) for organizing by date
+            save_local: Whether to also save locally
+            
+        Returns:
+            S3 key path if successful, None otherwise
+        """
+        if not cve_records:
+            logger.warning("No CVE records to save")
+            return None
+        
+        try:
+            # Generate filename with timestamp
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"nist_cve_{timestamp}.json"
+            
+            # Prepare data with metadata
+            data = {
+                'source': 'nist_nvd',
+                'data_type': 'cve',
+                'record_count': len(cve_records),
+                'ingested_at': datetime.now().isoformat(),
+                'date_filter': date_filter,
+                'vulnerabilities': cve_records
+            }
+            
+            # Convert to JSON
+            json_data = json.dumps(data, indent=2, ensure_ascii=False)
+            
+            # Determine S3 key with date-based organization
+            if date_filter:
+                # Organize by date: nist/cve/YYYY/MM/DD/filename
+                date_parts = date_filter.split('-')
+                if len(date_parts) == 3:
+                    year, month, day = date_parts
+                    s3_key = f"nist/cve/{year}/{month}/{day}/{filename}"
+                else:
+                    s3_key = f"nist/cve/{filename}"
+            else:
+                # Organize by ingestion date
+                year = datetime.now().strftime("%Y")
+                month = datetime.now().strftime("%m")
+                day = datetime.now().strftime("%d")
+                s3_key = f"nist/cve/{year}/{month}/{day}/{filename}"
+            
+            # Save to S3 if available
+            if self.s3_client:
+                try:
+                    self.s3_client.put_object(
+                        Bucket=self.config.S3_BUCKET_NAME,
+                        Key=s3_key,
+                        Body=json_data.encode('utf-8'),
+                        ContentType='application/json',
+                        Metadata={
+                            'record_count': str(len(cve_records)),
+                            'data_type': 'cve',
+                            'source': 'nist_nvd'
+                        }
+                    )
+                    logger.info(
+                        f"Uploaded {len(cve_records)} CVE records to S3: "
+                        f"s3://{self.config.S3_BUCKET_NAME}/{s3_key}"
+                    )
+                except Exception as e:
+                    logger.error(f"Failed to upload CVE data to S3: {str(e)}")
+                    return None
+            
+            # Optionally save locally
+            if save_local:
+                os.makedirs(self.config.RAW_DATA_DIR, exist_ok=True)
+                local_filepath = os.path.join(self.config.RAW_DATA_DIR, filename)
+                with open(local_filepath, 'w', encoding='utf-8') as f:
+                    f.write(json_data)
+                logger.info(f"Also saved locally to {local_filepath}")
+            
+            return s3_key if self.s3_client else None
+            
+        except Exception as e:
+            logger.error(f"Error saving CVE data: {str(e)}")
+            return None
+    
+    def save_cpe_data(self, cpe_records: List[Dict], date_filter: Optional[str] = None, save_local: bool = True) -> Optional[str]:
+        """
+        Save CPE data to S3 with proper organization.
+        
+        Args:
+            cpe_records: List of CPE product records
+            date_filter: Optional date filter string (YYYY-MM-DD) for organizing by date
+            save_local: Whether to also save locally
+            
+        Returns:
+            S3 key path if successful, None otherwise
+        """
+        if not cpe_records:
+            logger.warning("No CPE records to save")
+            return None
+        
+        try:
+            # Generate filename with timestamp
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"nist_cpe_{timestamp}.json"
+            
+            # Prepare data with metadata
+            data = {
+                'source': 'nist_nvd',
+                'data_type': 'cpe',
+                'record_count': len(cpe_records),
+                'ingested_at': datetime.now().isoformat(),
+                'date_filter': date_filter,
+                'products': cpe_records
+            }
+            
+            # Convert to JSON
+            json_data = json.dumps(data, indent=2, ensure_ascii=False)
+            
+            # Determine S3 key with date-based organization
+            if date_filter:
+                # Organize by date: nist/cpe/YYYY/MM/DD/filename
+                date_parts = date_filter.split('-')
+                if len(date_parts) == 3:
+                    year, month, day = date_parts
+                    s3_key = f"nist/cpe/{year}/{month}/{day}/{filename}"
+                else:
+                    s3_key = f"nist/cpe/{filename}"
+            else:
+                # Organize by ingestion date
+                year = datetime.now().strftime("%Y")
+                month = datetime.now().strftime("%m")
+                day = datetime.now().strftime("%d")
+                s3_key = f"nist/cpe/{year}/{month}/{day}/{filename}"
+            
+            # Save to S3 if available
+            if self.s3_client:
+                try:
+                    self.s3_client.put_object(
+                        Bucket=self.config.S3_BUCKET_NAME,
+                        Key=s3_key,
+                        Body=json_data.encode('utf-8'),
+                        ContentType='application/json',
+                        Metadata={
+                            'record_count': str(len(cpe_records)),
+                            'data_type': 'cpe',
+                            'source': 'nist_nvd'
+                        }
+                    )
+                    logger.info(
+                        f"Uploaded {len(cpe_records)} CPE records to S3: "
+                        f"s3://{self.config.S3_BUCKET_NAME}/{s3_key}"
+                    )
+                except Exception as e:
+                    logger.error(f"Failed to upload CPE data to S3: {str(e)}")
+                    return None
+            
+            # Optionally save locally
+            if save_local:
+                os.makedirs(self.config.RAW_DATA_DIR, exist_ok=True)
+                local_filepath = os.path.join(self.config.RAW_DATA_DIR, filename)
+                with open(local_filepath, 'w', encoding='utf-8') as f:
+                    f.write(json_data)
+                logger.info(f"Also saved locally to {local_filepath}")
+            
+            return s3_key if self.s3_client else None
+            
+        except Exception as e:
+            logger.error(f"Error saving CPE data: {str(e)}")
+            return None
