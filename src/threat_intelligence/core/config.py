@@ -20,7 +20,8 @@ class Config:
     REDDIT_USER_AGENT = os.getenv('REDDIT_USER_AGENT', 'ThreatIntelligenceBot/1.0')
     
     # Firecrawl API Configuration (for Twitter/X scraping)
-    FIRECRAWL_API_KEY = os.getenv('FIRECRAWL_API_KEY', 'FIRECRAWL_API_KEY_REDACTED')
+    # IMPORTANT: Never hardcode API keys. Set FIRECRAWL_API_KEY in .env.local (or your environment).
+    FIRECRAWL_API_KEY = os.getenv('FIRECRAWL_API_KEY')
     
     # NIST API Configuration
     NIST_API_KEY = os.getenv('NIST_API_KEY')
@@ -30,6 +31,19 @@ class Config:
     NIST_MAX_RETRIES = int(os.getenv('NIST_MAX_RETRIES', '5'))
     NIST_RETRY_BACKOFF = float(os.getenv('NIST_RETRY_BACKOFF', '2.0'))  # Exponential backoff multiplier
     NIST_RESULTS_PER_PAGE = int(os.getenv('NIST_RESULTS_PER_PAGE', '2000'))  # Max is 2000, default 2000 (best practice)
+    
+    # MITRE CWE API Configuration
+    CWE_API_BASE_URL = os.getenv('CWE_API_BASE_URL', 'https://cwe-api.mitre.org/api/v1/')
+    CWE_RATE_LIMIT_REQUESTS = int(os.getenv('CWE_RATE_LIMIT_REQUESTS', '10'))  # Requests per window (conservative)
+    CWE_RATE_LIMIT_WINDOW = int(os.getenv('CWE_RATE_LIMIT_WINDOW', '60'))  # Seconds
+    CWE_MAX_RETRIES = int(os.getenv('CWE_MAX_RETRIES', '5'))
+    
+    # VulnCheck API Configuration
+    VULNCHECK_API_KEY = os.getenv('VULNCHECK_API_KEY')
+    VULNCHECK_API_BASE_URL = os.getenv('VULNCHECK_API_BASE_URL', 'https://api.vulncheck.com/v3/')
+    VULNCHECK_RATE_LIMIT_REQUESTS = int(os.getenv('VULNCHECK_RATE_LIMIT_REQUESTS', '10'))
+    VULNCHECK_RATE_LIMIT_WINDOW = int(os.getenv('VULNCHECK_RATE_LIMIT_WINDOW', '60'))
+    VULNCHECK_MAX_RETRIES = int(os.getenv('VULNCHECK_MAX_RETRIES', '5'))
     
     # AWS S3 Configuration
     AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')

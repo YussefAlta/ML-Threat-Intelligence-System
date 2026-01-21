@@ -198,6 +198,210 @@ class DataStorage:
                 logger.error(f"Error processing file {filepath}: {str(e)}")
         
         return summary
+
+    # ------------------------------------------------------------------
+    # S3 helpers for NIST CVE/CPE data
+    # ------------------------------------------------------------------
+
+    def list_s3_objects(self, prefix: str) -> List[Dict]:
+        """
+        List objects in S3 under a given prefix.
+
+        Returns:
+            List of dicts with at least 'Key' and 'LastModified'
+        """
+        if not self.s3_client:
+            logger.warning("S3 client not available; cannot list S3 objects")
+            return []
+
+        objects: List[Dict] = []
+        continuation_token = None
+
+        try:
+            while True:
+                kwargs = {
+                    "Bucket": self.config.S3_BUCKET_NAME,
+                    "Prefix": prefix,
+                    "MaxKeys": 1000,
+                }
+                if continuation_token:
+                    kwargs["ContinuationToken"] = continuation_token
+
+                response = self.s3_client.list_objects_v2(**kwargs)
+                contents = response.get("Contents", [])
+                objects.extend(contents)
+
+                if not response.get("IsTruncated"):
+                    break
+                continuation_token = response.get("NextContinuationToken")
+
+            logger.info(
+                f"Listed {len(objects)} objects from S3 with prefix '{prefix}'"
+            )
+            return objects
+        except Exception as e:
+            logger.error(f"Error listing S3 objects for prefix '{prefix}': {str(e)}")
+            return []
+
+    def load_json_from_s3(self, key: str) -> Optional[Dict]:
+        """
+        Load a JSON object from S3.
+
+        Args:
+            key: S3 object key
+
+        Returns:
+            Parsed JSON dict or None if error
+        """
+        if not self.s3_client:
+            logger.warning("S3 client not available; cannot load from S3")
+            return None
+
+        try:
+            response = self.s3_client.get_object(
+                Bucket=self.config.S3_BUCKET_NAME,
+                Key=key,
+            )
+            body = response["Body"].read().decode("utf-8")
+            data = json.loads(body)
+            logger.info(
+                f"Loaded JSON from S3: s3://{self.config.S3_BUCKET_NAME}/{key}"
+            )
+            return data
+        except Exception as e:
+            logger.error(
+                f"Error loading JSON from S3 key '{key}': {str(e)}"
+            )
+            return None
+
+    def get_latest_nist_cve_s3_key(self) -> Optional[str]:
+        """
+        Get the latest NIST CVE object key from S3.
+
+        Keys are expected under: nist/cve/YYYY/MM/DD/nist_cve_*.json
+        """
+        objects = self.list_s3_objects("nist/cve/")
+        if not objects:
+            logger.warning("No NIST CVE objects found in S3 under 'nist/cve/'")
+            return None
+
+        # Pick the most recently modified object
+        latest_obj = max(objects, key=lambda o: o.get("LastModified"))
+        key = latest_obj.get("Key")
+        logger.info(
+            f"Latest NIST CVE S3 object: s3://{self.config.S3_BUCKET_NAME}/{key}"
+        )
+        return key
+
+    def get_latest_nist_cpe_s3_key(self) -> Optional[str]:
+        """
+        Get the latest NIST CPE object key from S3.
+
+        Keys are expected under: nist/cpe/YYYY/MM/DD/nist_cpe_*.json
+        """
+        objects = self.list_s3_objects("nist/cpe/")
+        if not objects:
+            logger.warning("No NIST CPE objects found in S3 under 'nist/cpe/'")
+            return None
+
+        latest_obj = max(objects, key=lambda o: o.get("LastModified"))
+        key = latest_obj.get("Key")
+        logger.info(
+            f"Latest NIST CPE S3 object: s3://{self.config.S3_BUCKET_NAME}/{key}"
+        )
+        return key
+
+    # ------------------------------------------------------------------
+    # Enriched data storage
+    # ------------------------------------------------------------------
+
+    def save_enriched_cve_data(
+        self,
+        enriched_records: List[Dict],
+        enrichment_source: str,
+        date_filter: Optional[str] = None,
+        save_local: bool = True,
+    ) -> Optional[str]:
+        """
+        Save enriched CVE data to S3 with clear organization.
+
+        Args:
+            enriched_records: List of enrichment dicts (one per CVE)
+            enrichment_source: Source of enrichment (e.g., "cwe", "vulncheck")
+            date_filter: Optional date (YYYY-MM-DD) for organization
+            save_local: Whether to also save locally
+
+        Returns:
+            S3 key path if successful, None otherwise
+        """
+        if not enriched_records:
+            logger.warning("No enriched CVE records to save")
+            return None
+
+        try:
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"enriched_cve_{enrichment_source}_{timestamp}.json"
+
+            data = {
+                "source": enrichment_source,
+                "data_type": "cve_enrichment",
+                "record_count": len(enriched_records),
+                "ingested_at": datetime.now().isoformat(),
+                "date_filter": date_filter,
+                "enriched_records": enriched_records,
+            }
+
+            json_data = json.dumps(data, indent=2, ensure_ascii=False)
+
+            # S3 key structure: enriched/cve/<source>/YYYY/MM/DD/filename
+            if date_filter:
+                date_parts = date_filter.split("-")
+                if len(date_parts) == 3:
+                    year, month, day = date_parts
+                    s3_key = f"enriched/cve/{enrichment_source}/{year}/{month}/{day}/{filename}"
+                else:
+                    s3_key = f"enriched/cve/{enrichment_source}/{filename}"
+            else:
+                year = datetime.now().strftime("%Y")
+                month = datetime.now().strftime("%m")
+                day = datetime.now().strftime("%d")
+                s3_key = f"enriched/cve/{enrichment_source}/{year}/{month}/{day}/{filename}"
+
+            if self.s3_client:
+                try:
+                    self.s3_client.put_object(
+                        Bucket=self.config.S3_BUCKET_NAME,
+                        Key=s3_key,
+                        Body=json_data.encode("utf-8"),
+                        ContentType="application/json",
+                        Metadata={
+                            "record_count": str(len(enriched_records)),
+                            "data_type": "cve_enrichment",
+                            "source": enrichment_source,
+                        },
+                    )
+                    logger.info(
+                        f"Uploaded {len(enriched_records)} enriched CVE records "
+                        f"to S3: s3://{self.config.S3_BUCKET_NAME}/{s3_key}"
+                    )
+                except Exception as e:
+                    logger.error(
+                        f"Failed to upload enriched CVE data to S3 ({enrichment_source}): {str(e)}"
+                    )
+                    return None
+
+            if save_local:
+                os.makedirs(self.config.RAW_DATA_DIR, exist_ok=True)
+                local_filepath = os.path.join(self.config.RAW_DATA_DIR, filename)
+                with open(local_filepath, "w", encoding="utf-8") as f:
+                    f.write(json_data)
+                logger.info(f"Also saved enriched CVE data locally to {local_filepath}")
+
+            return s3_key if self.s3_client else None
+
+        except Exception as e:
+            logger.error(f"Error saving enriched CVE data ({enrichment_source}): {str(e)}")
+            return None
     
     def save_cve_data(self, cve_records: List[Dict], date_filter: Optional[str] = None, save_local: bool = True) -> Optional[str]:
         """
