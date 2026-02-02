@@ -1,5 +1,5 @@
 """
-Configuration management for the threat intelligence webscraper.
+Configuration management for the ML Threat Intelligence System.
 """
 import os
 from dotenv import load_dotenv
@@ -9,7 +9,7 @@ load_dotenv()  # Loads .env
 load_dotenv('.env.local')  # Loads .env.local (overrides .env)
 
 class Config:
-    """Configuration class for the webscraper."""
+    """Configuration class for the threat intelligence system."""
     
     # NIST API Configuration
     NIST_API_KEY = os.getenv('NIST_API_KEY')

@@ -37,7 +37,7 @@ Phase 1 implements an automated data ingestion pipeline that pulls CVE (Common V
          │                        │                        │
          ▼                        ▼                        ▼
 ┌──────────────┐       ┌──────────────┐       ┌──────────────┐
-│ CVE Scraper  │       │ CPE Scraper  │       │  Storage     │
+│ CVE Ingester │       │ CPE Ingester │       │  Storage     │
 │              │       │              │       │  (S3)        │
 │ - Pagination │       │ - Pagination │       │              │
 │ - Filtering  │       │ - Filtering  │       │ - CVE Data   │
@@ -499,7 +499,7 @@ GET https://services.nvd.nist.gov/rest/json/cves/2.0
 
 **1. `fetch_cves()`**
 ```python
-cves = scraper.fetch_cves(
+cves = ingester.fetch_cves(
     pub_start_date='2025-11-01T00:00:00.000',
     pub_end_date='2025-11-07T23:59:59.999',
     results_per_page=200,
@@ -509,7 +509,7 @@ cves = scraper.fetch_cves(
 
 **2. `fetch_recent_cves()`**
 ```python
-cves = scraper.fetch_recent_cves(
+cves = ingester.fetch_recent_cves(
     days=7,        # Last 7 days
     max_count=100
 )
@@ -517,7 +517,7 @@ cves = scraper.fetch_recent_cves(
 
 **3. `fetch_cve_by_id()`**
 ```python
-cve = scraper.fetch_cve_by_id('CVE-2024-1234')
+cve = ingester.fetch_cve_by_id('CVE-2024-1234')
 ```
 
 ### CVE Data Structure
@@ -558,7 +558,7 @@ GET https://services.nvd.nist.gov/rest/json/cpes/2.0
 
 **1. `fetch_cpes()`**
 ```python
-cpes = scraper.fetch_cpes(
+cpes = ingester.fetch_cpes(
     last_mod_start_date='2025-11-01T00:00:00.000',
     last_mod_end_date='2025-11-07T23:59:59.999',
     results_per_page=200,
@@ -568,7 +568,7 @@ cpes = scraper.fetch_cpes(
 
 **2. `fetch_recent_cpes()`**
 ```python
-cpes = scraper.fetch_recent_cpes(
+cpes = ingester.fetch_recent_cpes(
     days=7,        # Last 7 days
     max_count=100
 )
@@ -576,7 +576,7 @@ cpes = scraper.fetch_recent_cpes(
 
 **3. `fetch_cpe_by_match_string()`**
 ```python
-cpes = scraper.fetch_cpe_by_match_string(
+cpes = ingester.fetch_cpe_by_match_string(
     cpe_match_string='cpe:2.3:a:apache:http_server:*:*:*:*:*:*:*:*',
     max_count=50
 )
@@ -799,14 +799,14 @@ results = orchestrator.ingest_all(days_back=7)
 ### Advanced Usage
 
 ```python
-from threat_intelligence.scrapers.nist_cve_scraper import NISTCVEScraper
-from threat_intelligence.scrapers.nist_cpe_scraper import NISTCPEScraper
-from threat_intelligence.storage.data_storage import DataStorage
+from src.threat_intelligence.ingesters.nist_cve_ingester import NISTCVEIngester
+from src.threat_intelligence.ingesters.nist_cpe_ingester import NISTCPEIngester
+from src.threat_intelligence.storage.data_storage import DataStorage
 
 config = Config()
 storage = DataStorage(config)
-cve_scraper = NISTCVEScraper(config, storage=storage)
-cpe_scraper = NISTCPEScraper(config, storage=storage)
+cve_ingester = NISTCVEIngester(config, storage=storage)
+cpe_ingester = NISTCPEIngester(config, storage=storage)
 
 # Fetch CVEs by date range (uses default batch size of 2000)
 cves = cve_ingester.fetch_cves(

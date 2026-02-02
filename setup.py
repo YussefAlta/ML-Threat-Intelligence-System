@@ -1,5 +1,5 @@
 """
-Setup script for Threat Intelligence Web Scraping System
+Setup script for ML Threat Intelligence System
 """
 
 from setuptools import setup, find_packages
@@ -16,11 +16,11 @@ def read_requirements():
         return [line.strip() for line in fh if line.strip() and not line.startswith("#")]
 
 setup(
-    name="threat-intelligence-scraper",
+    name="ml-threat-intelligence-system",
     version="1.0.0",
     author="AVINT Project",
     author_email="",
-    description="A comprehensive system for collecting threat intelligence data from various sources",
+    description="A production-ready system for ingesting and enriching CVE data from NIST NVD API with MITRE CWE and VulnCheck intelligence",
     long_description=read_readme(),
     long_description_content_type="text/markdown",
     url="https://github.com/avint-project/ml-threat-intelligence-system",
