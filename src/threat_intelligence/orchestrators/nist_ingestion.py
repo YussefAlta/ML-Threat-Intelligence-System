@@ -1,13 +1,13 @@
 """
 Main orchestrator for NIST CVE/CPE data ingestion pipeline.
-Handles scheduling, incremental updates, and coordination between CVE and CPE scrapers.
+Handles scheduling, incremental updates, and coordination between CVE and CPE ingesters.
 """
 import logging
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple
 from ..core.config import Config
-from ..scrapers.nist_cve_scraper import NISTCVEScraper
-from ..scrapers.nist_cpe_scraper import NISTCPEScraper
+from ..ingesters.nist_cve_ingester import NISTCVEIngester
+from ..ingesters.nist_cpe_ingester import NISTCPEIngester
 from ..storage.data_storage import DataStorage
 
 logger = logging.getLogger(__name__)
@@ -38,9 +38,9 @@ class NISTIngestionOrchestrator:
         # Initialize storage
         self.storage = DataStorage(self.config)
         
-        # Initialize scrapers
-        self.cve_scraper = NISTCVEScraper(self.config, storage=self.storage)
-        self.cpe_scraper = NISTCPEScraper(self.config, storage=self.storage)
+        # Initialize ingesters
+        self.cve_ingester = NISTCVEIngester(self.config, storage=self.storage)
+        self.cpe_ingester = NISTCPEIngester(self.config, storage=self.storage)
         
         logger.info("NIST Ingestion Orchestrator initialized")
     
@@ -85,7 +85,7 @@ class NISTIngestionOrchestrator:
             logger.info(f"Fetching CVEs from {pub_start_date} to {pub_end_date}")
             
             # Fetch CVEs
-            cve_records = self.cve_scraper.fetch_cves(
+            cve_records = self.cve_ingester.fetch_cves(
                 pub_start_date=pub_start_date,
                 pub_end_date=pub_end_date,
                 max_count=max_count
@@ -176,7 +176,7 @@ class NISTIngestionOrchestrator:
             logger.info(f"Fetching CPEs modified from {last_mod_start_date} to {last_mod_end_date}")
             
             # Fetch CPEs
-            cpe_records = self.cpe_scraper.fetch_cpes(
+            cpe_records = self.cpe_ingester.fetch_cpes(
                 last_mod_start_date=last_mod_start_date,
                 last_mod_end_date=last_mod_end_date,
                 max_count=max_count

@@ -83,7 +83,7 @@ class VulnCheckEnricher:
         Enrich a list of CVE records with VulnCheck intelligence.
 
         Args:
-            cve_records: List of NIST CVE records (as returned by NISTCVEScraper)
+            cve_records: List of NIST CVE records (as returned by NISTCVEIngester)
 
         Returns:
             List of enrichment records (one per CVE)

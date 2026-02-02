@@ -58,7 +58,7 @@ class NISTEnrichmentOrchestrator:
         Enrich CVEs with CWE and VulnCheck data.
 
         Args:
-            cve_records: List of CVE records (from NISTCVEScraper or stored files)
+            cve_records: List of CVE records (from NISTCVEIngester or stored files)
             date_filter: Optional date for storage organization
             save_local: Whether to save enriched data locally as well as S3
             run_cwe: Whether to run CWE enrichment

@@ -88,7 +88,7 @@ class CWEEnricher:
         Enrich a list of CVE records with CWE weakness details.
 
         Args:
-            cve_records: List of NIST CVE records (as returned by NISTCVEScraper)
+            cve_records: List of NIST CVE records (as returned by NISTCVEIngester)
 
         Returns:
             List of enrichment records (one per CVE that has CWE IDs)

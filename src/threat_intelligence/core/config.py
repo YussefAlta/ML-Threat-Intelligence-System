@@ -11,18 +11,6 @@ load_dotenv('.env.local')  # Loads .env.local (overrides .env)
 class Config:
     """Configuration class for the webscraper."""
     
-    # Main API Key
-    API_KEY = os.getenv('API_KEY')
-    
-    # Reddit API Configuration
-    REDDIT_CLIENT_ID = os.getenv('REDDIT_CLIENT_ID')
-    REDDIT_CLIENT_SECRET = os.getenv('REDDIT_CLIENT_SECRET')
-    REDDIT_USER_AGENT = os.getenv('REDDIT_USER_AGENT', 'ThreatIntelligenceBot/1.0')
-    
-    # Firecrawl API Configuration (for Twitter/X scraping)
-    # IMPORTANT: Never hardcode API keys. Set FIRECRAWL_API_KEY in .env.local (or your environment).
-    FIRECRAWL_API_KEY = os.getenv('FIRECRAWL_API_KEY')
-    
     # NIST API Configuration
     NIST_API_KEY = os.getenv('NIST_API_KEY')
     NIST_API_BASE_URL = os.getenv('NIST_API_BASE_URL', 'https://services.nvd.nist.gov/rest/json/')
@@ -64,14 +52,5 @@ class Config:
     @classmethod
     def validate(cls):
         """Validate that required configuration is present."""
-        # Twitter uses snscrape - no API credentials needed
-        # Only Reddit requires API credentials
-        required_reddit = [
-            cls.REDDIT_CLIENT_ID,
-            cls.REDDIT_CLIENT_SECRET
-        ]
-        
-        if not all(required_reddit):
-            print("Warning: Reddit API credentials not fully configured")
-        
+        # No validation required for NIST API (optional API key)
         return True

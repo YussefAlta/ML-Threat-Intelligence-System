@@ -1,19 +1,18 @@
 """
-NIST CPE (Common Platform Enumeration) scraper.
+NIST CPE (Common Platform Enumeration) ingester.
 Fetches CPE data from NIST NVD API with pagination, rate limiting, and error handling.
 """
 import logging
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
-from .base_scraper import BaseScraper
 from ..utils.api_client import APIClient, RateLimiter
 
 logger = logging.getLogger(__name__)
 
 
-class NISTCPEScraper(BaseScraper):
+class NISTCPEIngester:
     """
-    Scraper for NIST CPE data from the National Vulnerability Database (NVD).
+    Ingester for NIST CPE data from the National Vulnerability Database (NVD).
     
     Supports:
     - Pagination for large datasets
@@ -25,13 +24,13 @@ class NISTCPEScraper(BaseScraper):
     
     def __init__(self, config, storage=None):
         """
-        Initialize NIST CPE scraper.
+        Initialize NIST CPE ingester.
         
         Args:
             config: Configuration object
             storage: Optional DataStorage instance for saving data
         """
-        super().__init__(config)
+        self.config = config
         self.storage = storage
         
         # Initialize rate limiter
@@ -50,51 +49,10 @@ class NISTCPEScraper(BaseScraper):
             timeout=60
         )
         
-        # CPE API endpoints (using 2.3 version)
+        # CPE API endpoints (using 2.0 version)
         self.cpe_endpoint = "cpes/2.0"
         
-        logger.info("NIST CPE scraper initialized")
-    
-    def scrape_posts(self, source: str = "cpe", max_posts: Optional[int] = None) -> List[Dict]:
-        """
-        Scrape CPE data from NIST API.
-        
-        Note: This method signature matches BaseScraper but 'source' and 'max_posts'
-        have different meanings for CPE data:
-        - source: Not used (kept for interface compatibility)
-        - max_posts: Maximum number of CPEs to fetch (None = fetch all)
-        
-        Args:
-            source: Not used (for interface compatibility)
-            max_posts: Maximum number of CPEs to fetch
-            
-        Returns:
-            List of CPE records
-        """
-        return self.fetch_cpes(max_count=max_posts)
-    
-    def extract_links(self, post: Dict) -> List[str]:
-        """
-        Extract links from a CPE record.
-        
-        Args:
-            post: CPE record dictionary
-            
-        Returns:
-            List of URLs found in the CPE record (typically empty for CPEs)
-        """
-        links = []
-        
-        # CPE records may have reference links
-        cpe_item = post.get('cpe', {})
-        references = cpe_item.get('references', [])
-        
-        for ref in references:
-            url = ref.get('ref', '')
-            if url:
-                links.append(url)
-        
-        return links
+        logger.info("NIST CPE ingester initialized")
     
     def fetch_cpes(
         self,
@@ -309,4 +267,3 @@ class NISTCPEScraper(BaseScraper):
             keyword_exact_match=exact_match,
             max_count=max_count
         )
-

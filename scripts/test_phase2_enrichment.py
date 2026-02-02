@@ -13,7 +13,7 @@ import logging
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from threat_intelligence.core.config import Config
-from threat_intelligence.scrapers.nist_cve_scraper import NISTCVEScraper
+from threat_intelligence.ingesters.nist_cve_ingester import NISTCVEIngester
 from threat_intelligence.storage.data_storage import DataStorage
 from threat_intelligence.orchestrators.nist_enrichment import NISTEnrichmentOrchestrator
 

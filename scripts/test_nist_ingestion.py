@@ -19,8 +19,8 @@ from datetime import datetime, timedelta
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
 from threat_intelligence.core.config import Config
-from threat_intelligence.scrapers.nist_cve_scraper import NISTCVEScraper
-from threat_intelligence.scrapers.nist_cpe_scraper import NISTCPEScraper
+from threat_intelligence.ingesters.nist_cve_ingester import NISTCVEIngester
+from threat_intelligence.ingesters.nist_cpe_ingester import NISTCPEIngester
 from threat_intelligence.orchestrators.nist_ingestion import NISTIngestionOrchestrator
 from threat_intelligence.storage.data_storage import DataStorage
 
@@ -55,17 +55,17 @@ def test_config():
 
 
 def test_cve_scraper(config, max_count=10):
-    """Test NIST CVE scraper."""
+    """Test NIST CVE ingester."""
     logger.info("=" * 60)
-    logger.info("Testing NIST CVE Scraper")
+    logger.info("Testing NIST CVE Ingester")
     logger.info("=" * 60)
     
     try:
-        scraper = NISTCVEScraper(config)
+        ingester = NISTCVEIngester(config)
         
         # Test fetching recent CVEs
         logger.info(f"Fetching up to {max_count} recent CVEs...")
-        cves = scraper.fetch_recent_cves(days=7, max_count=max_count)
+        cves = ingester.fetch_recent_cves(days=7, max_count=max_count)
         
         if cves:
             logger.info(f"✅ Successfully fetched {len(cves)} CVE records")
@@ -96,17 +96,17 @@ def test_cve_scraper(config, max_count=10):
 
 
 def test_cpe_scraper(config, max_count=10):
-    """Test NIST CPE scraper."""
+    """Test NIST CPE ingester."""
     logger.info("=" * 60)
-    logger.info("Testing NIST CPE Scraper")
+    logger.info("Testing NIST CPE Ingester")
     logger.info("=" * 60)
     
     try:
-        scraper = NISTCPEScraper(config)
+        ingester = NISTCPEIngester(config)
         
         # Test fetching recent CPEs
         logger.info(f"Fetching up to {max_count} recent CPEs...")
-        cpes = scraper.fetch_recent_cpes(days=7, max_count=max_count)
+        cpes = ingester.fetch_recent_cpes(days=7, max_count=max_count)
         
         if cpes:
             logger.info(f"✅ Successfully fetched {len(cpes)} CPE records")
@@ -143,11 +143,11 @@ def test_pagination(config):
     logger.info("=" * 60)
     
     try:
-        scraper = NISTCVEScraper(config)
+        ingester = NISTCVEIngester(config)
         
         # Fetch with pagination (request more than one page)
         logger.info("Testing pagination by fetching 15 records with 10 per page...")
-        cves = scraper.fetch_cves(
+        cves = ingester.fetch_cves(
             pub_start_date=(datetime.now() - timedelta(days=7)).strftime('%Y-%m-%dT00:00:00.000'),
             pub_end_date=datetime.now().strftime('%Y-%m-%dT23:59:59.999'),
             results_per_page=10,
@@ -274,17 +274,17 @@ def main():
     
     results = {}
     
-    # Test CVE scraper
+    # Test CVE ingester
     if args.test in ['all', 'cve']:
         cve_success, cve_records = test_cve_scraper(config, max_count=args.max_count)
-        results['cve_scraper'] = cve_success
+        results['cve_ingester'] = cve_success
     else:
         cve_records = []
     
-    # Test CPE scraper
+    # Test CPE ingester
     if args.test in ['all', 'cpe']:
         cpe_success, cpe_records = test_cpe_scraper(config, max_count=args.max_count)
-        results['cpe_scraper'] = cpe_success
+        results['cpe_ingester'] = cpe_success
     else:
         cpe_records = []
     

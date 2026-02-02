@@ -69,13 +69,13 @@ Phase 1 implements an automated data ingestion pipeline that pulls CVE (Common V
    - Error classification and handling
    - HTTP request management
 
-3. **CVE Scraper** (`scrapers/nist_cve_scraper.py`)
+3. **CVE Ingester** (`ingesters/nist_cve_ingester.py`)
    - Fetches CVE data from NIST API
    - Handles pagination
    - Supports date-based filtering
    - Incremental updates
 
-4. **CPE Scraper** (`scrapers/nist_cpe_scraper.py`)
+4. **CPE Ingester** (`ingesters/nist_cpe_ingester.py`)
    - Fetches CPE data from NIST API
    - Handles pagination
    - Supports keyword search
@@ -132,7 +132,7 @@ all_cves = [CVE 0-2999]  (3000 items)
 
 ### Implementation Details
 
-**Code Location:** `scrapers/nist_cve_scraper.py` lines 99-189
+**Code Location:** `ingesters/nist_cve_ingester.py` lines 99-189
 
 ```python
 def fetch_cves(...):
@@ -809,7 +809,7 @@ cve_scraper = NISTCVEScraper(config, storage=storage)
 cpe_scraper = NISTCPEScraper(config, storage=storage)
 
 # Fetch CVEs by date range (uses default batch size of 2000)
-cves = cve_scraper.fetch_cves(
+cves = cve_ingester.fetch_cves(
     pub_start_date='2025-11-01T00:00:00.000',
     pub_end_date='2025-11-07T23:59:59.999',
     max_count=500
@@ -819,7 +819,7 @@ cves = cve_scraper.fetch_cves(
 storage.save_cve_data(cves, date_filter='2025-11-01')
 
 # Fetch CPEs by keyword
-cpes = cpe_scraper.fetch_cpes_by_keyword(
+cpes = cpe_ingester.fetch_cpes_by_keyword(
     keyword='apache',
     exact_match=False,
     max_count=100
@@ -850,8 +850,8 @@ python scripts/test_nist_ingestion.py --test pagination
 The test suite (`scripts/test_nist_ingestion.py`) validates:
 
 - ✅ Configuration loading
-- ✅ CVE scraper functionality
-- ✅ CPE scraper functionality
+- ✅ CVE ingester functionality
+- ✅ CPE ingester functionality
 - ✅ Pagination behavior
 - ✅ Storage operations
 - ✅ Orchestrator integration

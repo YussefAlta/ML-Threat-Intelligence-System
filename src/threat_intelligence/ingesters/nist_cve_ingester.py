@@ -1,19 +1,18 @@
 """
-NIST CVE (Common Vulnerabilities and Exposures) scraper.
+NIST CVE (Common Vulnerabilities and Exposures) ingester.
 Fetches CVE data from NIST NVD API with pagination, rate limiting, and error handling.
 """
 import logging
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any
-from .base_scraper import BaseScraper
 from ..utils.api_client import APIClient, RateLimiter
 
 logger = logging.getLogger(__name__)
 
 
-class NISTCVEScraper(BaseScraper):
+class NISTCVEIngester:
     """
-    Scraper for NIST CVE data from the National Vulnerability Database (NVD).
+    Ingester for NIST CVE data from the National Vulnerability Database (NVD).
     
     Supports:
     - Pagination for large datasets
@@ -25,13 +24,13 @@ class NISTCVEScraper(BaseScraper):
     
     def __init__(self, config, storage=None):
         """
-        Initialize NIST CVE scraper.
+        Initialize NIST CVE ingester.
         
         Args:
             config: Configuration object
             storage: Optional DataStorage instance for saving data
         """
-        super().__init__(config)
+        self.config = config
         self.storage = storage
         
         # Initialize rate limiter
@@ -53,48 +52,7 @@ class NISTCVEScraper(BaseScraper):
         # CVE API endpoint (using 2.0 version)
         self.cve_endpoint = "cves/2.0"
         
-        logger.info("NIST CVE scraper initialized")
-    
-    def scrape_posts(self, source: str = "cve", max_posts: Optional[int] = None) -> List[Dict]:
-        """
-        Scrape CVE data from NIST API.
-        
-        Note: This method signature matches BaseScraper but 'source' and 'max_posts'
-        have different meanings for CVE data:
-        - source: Not used (kept for interface compatibility)
-        - max_posts: Maximum number of CVEs to fetch (None = fetch all)
-        
-        Args:
-            source: Not used (for interface compatibility)
-            max_posts: Maximum number of CVEs to fetch
-            
-        Returns:
-            List of CVE records
-        """
-        return self.fetch_cves(max_count=max_posts)
-    
-    def extract_links(self, post: Dict) -> List[str]:
-        """
-        Extract links from a CVE record.
-        
-        Args:
-            post: CVE record dictionary
-            
-        Returns:
-            List of URLs found in the CVE record
-        """
-        links = []
-        
-        # Extract references from CVE
-        cve_data = post.get('cve', {})
-        references = cve_data.get('references', [])
-        
-        for ref in references:
-            url = ref.get('url')
-            if url:
-                links.append(url)
-        
-        return links
+        logger.info("NIST CVE ingester initialized")
     
     def fetch_cves(
         self,
@@ -281,4 +239,3 @@ class NISTCVEScraper(BaseScraper):
         except Exception as e:
             logger.error(f"Failed to fetch CVE {cve_id}: {str(e)}")
             return None
-
