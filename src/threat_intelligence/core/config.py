@@ -49,6 +49,15 @@ class Config:
     DATA_DIR = os.getenv('DATA_DIR', 'data')
     RAW_DATA_DIR = os.path.join(DATA_DIR, 'raw')
 
+    # GitHub API Configuration
+    GITHUB_TOKEN = os.getenv('GITHUB_TOKEN')
+    GITHUB_ENABLED = os.getenv('GITHUB_ENABLED', 'True').lower() == 'true'
+    GITHUB_MAX_ITEMS_PER_CVE = int(os.getenv('GITHUB_MAX_ITEMS_PER_CVE', '10'))
+    GITHUB_RATE_LIMIT_RPM = int(os.getenv('GITHUB_RATE_LIMIT_RPM', '20'))
+    GITHUB_SEARCH_TIMEOUT = int(os.getenv('GITHUB_SEARCH_TIMEOUT', '20'))
+    GITHUB_MAX_RETRIES = int(os.getenv('GITHUB_MAX_RETRIES', '3'))
+
+
     # NVD Reference Scraping Configuration
     NVD_REF_SCRAPE_ENABLED = os.getenv('NVD_REF_SCRAPE_ENABLED', 'True').lower() == 'true'
     NVD_REF_RATE_LIMIT_REQUESTS = int(os.getenv('NVD_REF_RATE_LIMIT_REQUESTS', '10'))

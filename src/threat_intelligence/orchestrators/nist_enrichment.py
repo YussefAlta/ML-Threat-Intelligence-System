@@ -4,6 +4,8 @@ Phase 2: NIST CVE Enrichment Orchestrator.
 This orchestrator:
 - Takes CVE records (e.g., from the NIST ingestion pipeline)
 - Enriches them with:
+    - NVD Reference URL scraping (raw/clean/meta)
+    - GitHub security evidence (raw/clean/meta)
     - MITRE CWE weakness details
     - VulnCheck vulnerability intelligence
 - Stores enriched results in S3 and/or local storage
@@ -17,19 +19,28 @@ from typing import Dict, List, Optional
 
 from ..core.config import Config
 from ..storage.data_storage import DataStorage
-from ..enrichment import CWEEnricher, VulnCheckEnricher, NVDReferenceScraperEnricher
+from ..enrichment import (
+    CWEEnricher,
+    VulnCheckEnricher,
+    NVDReferenceScraperEnricher,
+    GitHubSecurityEnricher,
+)
 
 logger = logging.getLogger(__name__)
 
 
 class NISTEnrichmentOrchestrator:
     """
-    Orchestrates enrichment of NIST CVE data with CWE and VulnCheck.
+    Orchestrates enrichment of NIST CVE data with:
+      - NVD reference scraping
+      - GitHub evidence
+      - CWE
+      - VulnCheck
 
     Typical usage:
         config = Config()
         orchestrator = NISTEnrichmentOrchestrator(config)
-        enriched = orchestrator.enrich_cves(cve_records)
+        results = orchestrator.enrich_cves(cve_records)
     """
 
     def __init__(self, config: Optional[Config] = None):
@@ -37,7 +48,10 @@ class NISTEnrichmentOrchestrator:
         self.config.validate()
 
         self.storage = DataStorage(self.config)
+
+        # Enrichment stages
         self.ref_scraper = NVDReferenceScraperEnricher(self.config)
+        self.github_enricher = GitHubSecurityEnricher(self.config)
         self.cwe_enricher = CWEEnricher(self.config)
         self.vulncheck_enricher = VulnCheckEnricher(self.config)
 
@@ -53,25 +67,32 @@ class NISTEnrichmentOrchestrator:
         date_filter: Optional[str] = None,
         save_local: bool = True,
         run_reference_scrape: bool = True,
+        run_github: bool = True,
         run_cwe: bool = True,
         run_vulncheck: bool = True,
     ) -> Dict[str, Dict]:
         """
-        Enrich CVEs with NVD reference scraping, CWE, and VulnCheck data.
+        Enrich CVEs with NVD reference scraping, GitHub, CWE, and VulnCheck data.
 
         Args:
             cve_records: List of CVE records (from NISTCVEIngester or stored files)
             date_filter: Optional date for storage organization
             save_local: Whether to save enriched data locally as well as S3
             run_reference_scrape: Whether to run NVD reference URL scraping enrichment
+            run_github: Whether to run GitHub enrichment
             run_cwe: Whether to run CWE enrichment
             run_vulncheck: Whether to run VulnCheck enrichment
 
         Returns:
-            Dict with keys "reference_scrape", "cwe", and "vulncheck" containing enrichment summaries.
+            Dict with keys:
+              - "reference_scrape"
+              - "github"
+              - "cwe"
+              - "vulncheck"
         """
         results: Dict[str, Dict] = {
             "reference_scrape": {"success": False, "urls_processed": 0, "urls_succeeded": 0, "urls_failed": 0},
+            "github": {"success": False, "items_processed": 0, "items_succeeded": 0, "items_failed": 0},
             "cwe": {"success": False, "records": 0, "s3_key": None},
             "vulncheck": {"success": False, "records": 0, "s3_key": None},
         }
@@ -85,7 +106,7 @@ class NISTEnrichmentOrchestrator:
             date_filter = datetime.now().strftime("%Y-%m-%d")
 
         # ------------------------------------------------------------------
-        # NVD Reference scraping enrichment (first)
+        # 1) NVD Reference scraping enrichment (first)
         # ------------------------------------------------------------------
         if run_reference_scrape:
             try:
@@ -105,7 +126,27 @@ class NISTEnrichmentOrchestrator:
                 }
 
         # ------------------------------------------------------------------
-        # CWE enrichment
+        # 2) GitHub enrichment (second)
+        # ------------------------------------------------------------------
+        if run_github:
+            try:
+                logger.info("Starting GitHub enrichment for CVEs...")
+                gh = self.github_enricher.enrich_cves(cve_records)
+                results["github"] = {
+                    "success": True,
+                    "items_processed": gh.get("items_processed", 0),
+                    "items_succeeded": gh.get("items_succeeded", 0),
+                    "items_failed": gh.get("items_failed", 0),
+                }
+            except Exception as e:
+                logger.error(f"GitHub enrichment failed: {str(e)}", exc_info=True)
+                results["github"] = {
+                    "success": False,
+                    "error": str(e),
+                }
+
+        # ------------------------------------------------------------------
+        # 3) CWE enrichment
         # ------------------------------------------------------------------
         if run_cwe:
             try:
@@ -140,7 +181,7 @@ class NISTEnrichmentOrchestrator:
                 }
 
         # ------------------------------------------------------------------
-        # VulnCheck enrichment
+        # 4) VulnCheck enrichment
         # ------------------------------------------------------------------
         if run_vulncheck:
             try:
@@ -175,5 +216,3 @@ class NISTEnrichmentOrchestrator:
                 }
 
         return results
-
-
