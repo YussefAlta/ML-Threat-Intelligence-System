@@ -48,6 +48,17 @@ class Config:
     # Data Storage
     DATA_DIR = os.getenv('DATA_DIR', 'data')
     RAW_DATA_DIR = os.path.join(DATA_DIR, 'raw')
+
+    # NVD Reference Scraping Configuration
+    NVD_REF_SCRAPE_ENABLED = os.getenv('NVD_REF_SCRAPE_ENABLED', 'True').lower() == 'true'
+    NVD_REF_RATE_LIMIT_REQUESTS = int(os.getenv('NVD_REF_RATE_LIMIT_REQUESTS', '10'))
+    NVD_REF_RATE_LIMIT_WINDOW = int(os.getenv('NVD_REF_RATE_LIMIT_WINDOW', '60'))
+    NVD_REF_TIMEOUT = int(os.getenv('NVD_REF_TIMEOUT', '30'))
+    NVD_REF_MAX_RETRIES = int(os.getenv('NVD_REF_MAX_RETRIES', '3'))
+    NVD_REF_MAX_SIZE_MB = int(os.getenv('NVD_REF_MAX_SIZE_MB', '10'))
+    NVD_REF_DEDUPE_TTL_DAYS = int(os.getenv('NVD_REF_DEDUPE_TTL_DAYS', '30'))
+    NVD_REF_MAX_CHUNK_SIZE = int(os.getenv('NVD_REF_MAX_CHUNK_SIZE', '1048576'))  # 1MB
+    NVD_REF_USER_AGENT = os.getenv('NVD_REF_USER_AGENT', 'ML-Threat-Intelligence-System/1.0')
     
     @classmethod
     def validate(cls):

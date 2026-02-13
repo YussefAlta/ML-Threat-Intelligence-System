@@ -17,7 +17,7 @@ from typing import Dict, List, Optional
 
 from ..core.config import Config
 from ..storage.data_storage import DataStorage
-from ..enrichment import CWEEnricher, VulnCheckEnricher
+from ..enrichment import CWEEnricher, VulnCheckEnricher, NVDReferenceScraperEnricher
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +37,7 @@ class NISTEnrichmentOrchestrator:
         self.config.validate()
 
         self.storage = DataStorage(self.config)
+        self.ref_scraper = NVDReferenceScraperEnricher(self.config)
         self.cwe_enricher = CWEEnricher(self.config)
         self.vulncheck_enricher = VulnCheckEnricher(self.config)
 
@@ -51,23 +52,26 @@ class NISTEnrichmentOrchestrator:
         cve_records: List[Dict],
         date_filter: Optional[str] = None,
         save_local: bool = True,
+        run_reference_scrape: bool = True,
         run_cwe: bool = True,
         run_vulncheck: bool = True,
     ) -> Dict[str, Dict]:
         """
-        Enrich CVEs with CWE and VulnCheck data.
+        Enrich CVEs with NVD reference scraping, CWE, and VulnCheck data.
 
         Args:
             cve_records: List of CVE records (from NISTCVEIngester or stored files)
             date_filter: Optional date for storage organization
             save_local: Whether to save enriched data locally as well as S3
+            run_reference_scrape: Whether to run NVD reference URL scraping enrichment
             run_cwe: Whether to run CWE enrichment
             run_vulncheck: Whether to run VulnCheck enrichment
 
         Returns:
-            Dict with keys "cwe" and "vulncheck" containing enrichment summaries.
+            Dict with keys "reference_scrape", "cwe", and "vulncheck" containing enrichment summaries.
         """
         results: Dict[str, Dict] = {
+            "reference_scrape": {"success": False, "urls_processed": 0, "urls_succeeded": 0, "urls_failed": 0},
             "cwe": {"success": False, "records": 0, "s3_key": None},
             "vulncheck": {"success": False, "records": 0, "s3_key": None},
         }
@@ -79,6 +83,26 @@ class NISTEnrichmentOrchestrator:
         # Normalize date_filter (default = today's date)
         if not date_filter:
             date_filter = datetime.now().strftime("%Y-%m-%d")
+
+        # ------------------------------------------------------------------
+        # NVD Reference scraping enrichment (first)
+        # ------------------------------------------------------------------
+        if run_reference_scrape:
+            try:
+                logger.info("Starting NVD reference scraping enrichment...")
+                ref_enriched = self.ref_scraper.enrich_cves(cve_records)
+                results["reference_scrape"] = {
+                    "success": True,
+                    "urls_processed": ref_enriched.get("urls_processed", 0),
+                    "urls_succeeded": ref_enriched.get("urls_succeeded", 0),
+                    "urls_failed": ref_enriched.get("urls_failed", 0),
+                }
+            except Exception as e:
+                logger.error(f"Reference scraping enrichment failed: {str(e)}", exc_info=True)
+                results["reference_scrape"] = {
+                    "success": False,
+                    "error": str(e),
+                }
 
         # ------------------------------------------------------------------
         # CWE enrichment
