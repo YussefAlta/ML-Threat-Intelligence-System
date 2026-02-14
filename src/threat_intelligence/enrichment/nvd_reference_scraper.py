@@ -1,8 +1,13 @@
 """
 NVD Reference URL Scraping Enricher.
 
-Fetches reference URLs from NIST CVE records, stores raw content, cleaned text,
-and metadata in S3 under enrichments/nvd_references/.
+Fetches reference URLs from NIST CVE records (the "Reference URLs" on each NVD
+detail page, e.g. https://nvd.nist.gov/vuln/detail/CVE-2021-44228). Stores raw
+content, cleaned text, and metadata in S3 under enrichments/nvd_references/.
+
+GitHub URLs are skipped by default (NVD_REF_SKIP_GITHUB=True); NIST often
+includes GitHub repo links that yield minimal CVE value. Only non-GitHub
+reference articles (advisories, writeups, vendor pages) are scraped.
 """
 
 from __future__ import annotations
@@ -57,6 +62,7 @@ class NVDReferenceScraperEnricher:
         self.max_size_bytes = self.config.NVD_REF_MAX_SIZE_MB * 1024 * 1024
         self.dedupe_ttl_days = self.config.NVD_REF_DEDUPE_TTL_DAYS
         self.user_agent = self.config.NVD_REF_USER_AGENT
+        self.skip_github = getattr(self.config, "NVD_REF_SKIP_GITHUB", True)
 
         self.session = requests.Session()
         self.session.headers.update({
@@ -98,6 +104,15 @@ class NVDReferenceScraperEnricher:
                 if not url or not isinstance(url, str):
                     continue
 
+                # Skip GitHub URLs: repos from NIST refs often lack useful CVE content
+                if self.skip_github and self._is_github_url(url):
+                    normalized_url = self._normalize_url(url)
+                    logger.info(
+                        f"NVDReferenceScraper: cve_id={cve_id} ref_index={ref_index} "
+                        f"normalized_url={normalized_url} skipped=github"
+                    )
+                    continue
+
                 urls_processed += 1
                 try:
                     result = self._fetch_url(url, cve_id, ref_index)
@@ -120,16 +135,23 @@ class NVDReferenceScraperEnricher:
 
     def _extract_references(self, cve_record: Dict[str, Any]) -> List[Dict[str, Any]]:
         """
-        Extract reference_data from NIST CVE JSON 5.0 schema.
+        Extract reference URLs from a CVE record.
 
-        Path: cve.references.reference_data
+        Supports:
+        - NVD API 2.0: cve.references is an array of { url, source?, tags? }.
+        - Legacy (e.g. 5.0): cve.references is an object with reference_data array.
+
+        Paths:
+        - 2.0: cve.references[]  (each item has "url")
+        - Legacy: cve.references.reference_data[]  (each item has "url")
         """
-        cve_data = cve_record.get("cve", {})
-        references = cve_data.get("references", {})
-        if isinstance(references, dict):
-            ref_data = references.get("reference_data", [])
-        elif isinstance(references, list):
+        cve_data = cve_record.get("cve", {}) or {}
+        references = cve_data.get("references")
+
+        if isinstance(references, list):
             ref_data = references
+        elif isinstance(references, dict):
+            ref_data = references.get("reference_data") if references else []
         else:
             ref_data = []
 
@@ -141,6 +163,23 @@ class NVDReferenceScraperEnricher:
             if isinstance(ref, dict) and ref.get("url"):
                 result.append(ref)
         return result
+
+    def _is_github_url(self, url: str) -> bool:
+        """Return True if URL is a GitHub host (repos, gists, raw)."""
+        try:
+            parsed = urlparse(url)
+            netloc = (parsed.netloc or "").lower()
+            if not netloc:
+                return False
+            # Strip optional port and www
+            host = netloc.split(":")[0].lstrip("www.")
+            return host in (
+                "github.com",
+                "raw.githubusercontent.com",
+                "gist.github.com",
+            )
+        except Exception:
+            return False
 
     def _normalize_url(self, url: str) -> str:
         """Normalize URL for deduplication: remove fragments, sort params, etc."""

@@ -117,7 +117,8 @@ This document describes the current state of the CVE enrichment pipeline, which 
 | CWE Enrichment | ✅ Operational | Full weakness details |
 | VulnCheck Enrichment | ✅ Operational | Exploit intelligence |
 | Pipeline Orchestration | ✅ Operational | Fully automated |
-| OSINT Enrichment | 🚧 In Development | Articles, social media, GitHub repos, etc. |
+| NVD Reference Scraping | ✅ Operational | Reference URLs from NIST CVE records (non-GitHub) |
+| OSINT Enrichment | 🚧 In Development | Articles, social media, etc. (no GitHub ingestion) |
 
 **Result**: The system successfully transforms basic CVE identifiers into comprehensive, actionable threat intelligence data suitable for analysis, prioritization, and automated response.
 
@@ -131,7 +132,7 @@ The enrichment pipeline is being extended to include OSINT (Open Source Intellig
 
 - **Articles & Blog Posts**: Threat intelligence articles, security research blogs
 - **Social Media Feeds**: Twitter/X, Reddit, LinkedIn security discussions
-- **GitHub Repositories**: Security tools, proof-of-concepts, vulnerability reports
+- **NIST reference URLs only**: Each CVE’s reference links (e.g. on [NVD detail pages](https://nvd.nist.gov/vuln/detail/CVE-2021-44228)) are scraped; GitHub URLs are skipped (repos often lack useful CVE content).
 - **Security Advisories**: Vendor advisories, security bulletins
 - **Threat Intelligence Feeds**: Commercial and open-source threat feeds
 

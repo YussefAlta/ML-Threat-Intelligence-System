@@ -218,7 +218,7 @@ python scripts/test_enrichment_simple.py
 - **Batch Processing**: Efficient handling of large datasets
 
 ### Future Enhancements 🚧
-- **OSINT Enrichment** (In Development): Articles, social media feeds, GitHub repos, and other open sources
+- **NVD Reference Scraping**: Fetches reference URLs from NIST CVE records (the links on each NVD detail page); GitHub URLs are skipped. **OSINT Enrichment** (In Development): Articles, social media, and other open sources
 - Real-time ingestion and streaming
 - ML-based vulnerability prioritization
 - Dashboard and visualization tools
@@ -278,7 +278,7 @@ See `src/threat_intelligence/core/config.py` for all configuration options:
 **From OSINT Sources** 🚧 (In Development):
 - Articles and blog posts mentioning CVEs
 - Social media discussions (Twitter/X, Reddit, LinkedIn)
-- GitHub repositories with related code/tools
+- Reference articles and advisories linked from NIST NVD (e.g. vendor advisories, writeups; GitHub repos are excluded)
 - Security advisories and bulletins
 - Community insights and analysis
 

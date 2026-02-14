@@ -202,6 +202,62 @@ class TestReferenceExtraction:
         assert enricher._extract_references(cve_record) == []
 
 
+class TestGitHubURLFilter:
+    """Test that GitHub reference URLs are skipped by default."""
+
+    def test_is_github_url_detects_github_com(self):
+        enricher = NVDReferenceScraperEnricher()
+        assert enricher._is_github_url("https://github.com/user/repo") is True
+        assert enricher._is_github_url("https://www.github.com/user/repo") is True
+
+    def test_is_github_url_detects_raw_and_gist(self):
+        enricher = NVDReferenceScraperEnricher()
+        assert enricher._is_github_url("https://raw.githubusercontent.com/org/repo/main/file") is True
+        assert enricher._is_github_url("https://gist.github.com/user/abc123") is True
+
+    def test_is_github_url_allows_other_domains(self):
+        enricher = NVDReferenceScraperEnricher()
+        assert enricher._is_github_url("https://nvd.nist.gov/vuln/detail/CVE-2024-1234") is False
+        assert enricher._is_github_url("https://vendor.com/advisory") is False
+
+    @patch("threat_intelligence.enrichment.nvd_reference_scraper.requests.Session")
+    def test_enrich_cves_skips_github_refs_by_default(self, mock_session_class):
+        config = Config()
+        config.NVD_REF_SCRAPE_ENABLED = True
+        config.NVD_REF_SKIP_GITHUB = True
+        config.S3_BUCKET_NAME = None
+        config.AWS_ACCESS_KEY_ID = None
+        enricher = NVDReferenceScraperEnricher(config)
+        enricher.storage.s3_client = None
+
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.url = "https://vendor.com/advisory/CVE-2024-12345"
+        mock_response.content = b"<html><body>Advisory content</body></html>"
+        mock_response.headers = {"Content-Type": "text/html"}
+        mock_response.history = []
+        mock_session = MagicMock()
+        mock_session.get.return_value = mock_response
+        mock_session_class.return_value = mock_session
+
+        cve_records = [
+            {
+                "cve": {
+                    "id": "CVE-2024-12345",
+                    "references": {
+                        "reference_data": [
+                            {"url": "https://github.com/Frozoewn/Slient-URL-Exploit", "name": "Repo"},
+                            {"url": "https://vendor.com/advisory/CVE-2024-12345", "name": "Advisory"},
+                        ]
+                    },
+                }
+            }
+        ]
+        result = enricher.enrich_cves(cve_records)
+        # Only the non-GitHub URL is processed (vendor advisory); GitHub skipped
+        assert result["urls_processed"] == 1
+
+
 class TestEnrichCvesIntegration:
     """Integration tests with mocked HTTP."""
 

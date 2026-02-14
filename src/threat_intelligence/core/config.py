@@ -59,7 +59,9 @@ class Config:
     NVD_REF_DEDUPE_TTL_DAYS = int(os.getenv('NVD_REF_DEDUPE_TTL_DAYS', '30'))
     NVD_REF_MAX_CHUNK_SIZE = int(os.getenv('NVD_REF_MAX_CHUNK_SIZE', '1048576'))  # 1MB
     NVD_REF_USER_AGENT = os.getenv('NVD_REF_USER_AGENT', 'ML-Threat-Intelligence-System/1.0')
-    
+    # Skip GitHub reference URLs (repos often have minimal CVE value; use other NIST refs only)
+    NVD_REF_SKIP_GITHUB = os.getenv('NVD_REF_SKIP_GITHUB', 'True').lower() == 'true'
+
     @classmethod
     def validate(cls):
         """Validate that required configuration is present."""
