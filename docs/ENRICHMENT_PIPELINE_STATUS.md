@@ -1,153 +1,107 @@
 # Enrichment Pipeline Status
 
-## 📊 Overview
+## Overview
 
-This document describes the current state of the CVE enrichment pipeline, which transforms basic NIST CVE data into rich, actionable threat intelligence.
+This document describes the current state of the threat intelligence enrichment pipeline, which ingests CVE data and OSINT sources, enriches them with structured metadata, and prepares a unified corpus for NLP analysis.
 
-## ✅ **Pipeline Status: Fully Operational**
-
-### **Complete Data Flow**
+## Pipeline Flow
 
 ```
-┌─────────────────┐
-│  NIST NVD API   │
-│  (CVE Data)     │
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐      ┌──────────────────┐
-│  NISTCVE        │─────▶│  S3: nist/cve/   │
-│  Ingester       │      │  (Raw Data)      │
-└─────────────────┘      └────────┬─────────┘
-                                   │
-                                   ▼
-                    ┌──────────────────────────┐
-                    │  NISTEnrichment          │
-                    │  Orchestrator            │
-                    └──────┬───────────────────┘
-                           │
-           ┌───────────────┼───────────────┐
-           │                               │
-           ▼                               ▼
-    ┌─────────────┐              ┌──────────────┐
-    │ CWEEnricher │              │VulnCheck     │
-    │             │              │Enricher      │
-    └──────┬──────┘              └──────┬───────┘
-           │                             │
-           ▼                             ▼
-    ┌─────────────┐              ┌──────────────┐
-    │ MITRE CWE   │              │ VulnCheck    │
-    │    API      │              │    API       │
-    └─────────────┘              └──────────────┘
-           │                             │
-           └─────────────┬───────────────┘
-                         │
-                         ▼
-              ┌──────────────────────┐
-              │  S3: enriched/cve/   │
-              │  - cwe/              │
-              │  - vulncheck/         │
-              └──────────────────────┘
+NIST NVD API --> CVE/CPE Ingestion --> S3: nist/cve/, nist/cpe/
+  |-> NVD Reference Scraping --> S3: enriched/cve/ref_links/{date}/{raw,clean,meta}/
+  |-> CWE Enrichment         --> S3: enriched/cve/cwe/
+  |-> VulnCheck Enrichment   --> S3: enriched/cve/vulncheck/
+
+OSINT Sources (PhishTank, ransomwatch, MITRE ATT&CK, ExploitDB, AlienVault OTX)
+  |-> OSINT Ingesters --> Unified Corpus --> S3: osint/corpus/
+
+Unified Corpus (600 docs, 6 categories)
+  |-> NLP Enrichment Pipeline --> S3: nlp/enriched/
+        (labeling -> entity extraction -> NER -> relations -> risk scoring)
 ```
 
-## 🔄 **Pipeline Components**
+## Component Status
 
-### 1. **Data Ingestion** ✅
-- **Component**: `NISTCVEIngester`
+| # | Component | Class / Module | Status | Output |
+|---|-----------|---------------|--------|--------|
+| 1 | NIST CVE Ingestion | `NISTCVEIngester` | Operational | `nist/cve/` |
+| 2 | NIST CPE Ingestion | `NISTCPEIngester` | Operational | `nist/cpe/` |
+| 3 | CWE Enrichment | `CWEEnricher` | Operational | `enriched/cve/cwe/` |
+| 4 | VulnCheck Enrichment | `VulnCheckEnricher` | Operational | `enriched/cve/vulncheck/` |
+| 5 | NVD Reference Scraping | `NVDReferenceScraperEnricher` | Operational | `enriched/cve/ref_links/{date}/{raw,clean,meta}/` |
+| 6 | OSINT - PhishTank | OSINT ingester | Operational | Phishing URLs with metadata |
+| 7 | OSINT - ransomwatch | OSINT ingester | Operational | Ransomware group leak activity |
+| 8 | OSINT - MITRE ATT&CK | OSINT ingester | Operational | Threat actor intrusion sets (techniques, malware, tools) |
+| 9 | OSINT - ExploitDB | OSINT ingester | Operational | Exploit descriptions and metadata |
+| 10 | OSINT - AlienVault OTX | OSINT ingester | Operational | Threat pulses with IOCs (requires API key) |
+| 11 | Corpus Assembly | — | Operational | `data/corpus/combined_corpus.jsonl` (600 docs, 6 categories) |
+| 12 | Gold Evaluation Set | — | Operational | `data/gold/gold_100.jsonl` (100 stratified labeled docs) |
+| 13 | NLP Enrichment Pipeline | `src/threat_intelligence/nlp/` | Code Complete | `nlp/enriched/` (not yet run on full corpus) |
+
+## Operational Components
+
+### NIST CVE/CPE Ingestion
+
+- **Components**: `NISTCVEIngester`, `NISTCPEIngester`
 - **Source**: NIST NVD API
-- **Output**: Raw CVE data in S3 (`nist/cve/YYYY/MM/DD/`)
-- **Status**: Fully operational
+- **Output**: Raw CVE and CPE data in S3
 
-### 2. **CWE Enrichment** ✅
+### CWE Enrichment
+
 - **Component**: `CWEEnricher`
 - **Source**: MITRE CWE API
-- **Enrichment**: Transforms CWE IDs (e.g., "CWE-79") into full weakness details
-- **Output**: Enriched CVE data in S3 (`enriched/cve/cwe/YYYY/MM/DD/`)
-- **Status**: Fully operational
+- **Enrichment**: Transforms CWE IDs into full weakness details (descriptions, consequences, mitigations, detection methods, hierarchy)
+- **Output**: `enriched/cve/cwe/`
 
-### 3. **VulnCheck Enrichment** ✅
+### VulnCheck Enrichment
+
 - **Component**: `VulnCheckEnricher`
 - **Source**: VulnCheck API
-- **Enrichment**: Adds exploit intelligence and threat context
-- **Output**: Enriched CVE data in S3 (`enriched/cve/vulncheck/YYYY/MM/DD/`)
-- **Status**: Fully operational
+- **Enrichment**: Exploit availability, proof-of-concept data, threat context, vulnerability prioritization
+- **Output**: `enriched/cve/vulncheck/`
 
-### 4. **Orchestration** ✅
-- **Component**: `NISTEnrichmentOrchestrator`
-- **Function**: Coordinates enrichment workflow
-- **Features**: Error isolation, batch processing, progress tracking
-- **Status**: Fully operational
+### NVD Reference Scraping
 
-## 📊 **Enrichment Data Comparison**
+- **Component**: `NVDReferenceScraperEnricher`
+- **Function**: Fetches, classifies, and cleans reference URLs from CVE records
+- **Output**: `enriched/cve/ref_links/{date}/{raw,clean,meta}/`
 
-### What NIST Provides (Raw)
-```json
-{
-  "cve": {
-    "id": "CVE-2024-1234",
-    "weaknesses": [
-      {"description": [{"value": "CWE-79"}]}  // Just the ID!
-    ]
-  }
-}
-```
+### OSINT Ingestion
 
-### What Our Enrichment Adds
+Five sources, all operational:
 
-**CWE Enrichment:**
-- Full weakness name and descriptions
-- Common consequences (impact analysis)
-- Potential mitigations (how to fix)
-- Demonstrative examples
-- Detection methods
-- Parent/child relationships (weakness hierarchy)
-- 20+ additional fields
+| Source | Data Collected |
+|--------|---------------|
+| PhishTank | Phishing URLs with metadata |
+| ransomwatch | Ransomware group leak site activity |
+| MITRE ATT&CK | Threat actor intrusion sets with techniques, malware, tools |
+| ExploitDB | Exploit descriptions and metadata |
+| AlienVault OTX | Threat pulses with IOCs (requires API key) |
 
-**VulnCheck Enrichment:**
-- Exploit availability
-- Proof-of-concept information
-- Threat context
-- Vulnerability prioritization data
+### Corpus Assembly and Gold Set
 
-## 📝 **Summary**
+- **Corpus**: 600 unified documents across 6 categories in `data/corpus/combined_corpus.jsonl`
+- **Gold Set**: 100 stratified labeled documents in `data/gold/gold_100.jsonl` for evaluation
 
-| Component | Status | Enrichment Level |
-|-----------|--------|-----------------|
-| NIST CVE Ingestion | ✅ Operational | Raw CVE data |
-| CWE Enrichment | ✅ Operational | Full weakness details |
-| VulnCheck Enrichment | ✅ Operational | Exploit intelligence |
-| Pipeline Orchestration | ✅ Operational | Fully automated |
-| NVD Reference Scraping | ✅ Operational | Reference URLs from NIST CVE records (non-GitHub) |
-| OSINT Enrichment | 🚧 In Development | Articles, social media, etc. (no GitHub ingestion) |
+## Code-Complete Components
 
-**Result**: The system successfully transforms basic CVE identifiers into comprehensive, actionable threat intelligence data suitable for analysis, prioritization, and automated response.
+### NLP Enrichment Pipeline
 
----
+All modules are implemented in `src/threat_intelligence/nlp/` but have not yet been executed on the full corpus.
 
-## 🚧 **Future Enhancements: OSINT Enrichment**
+| Module | Description |
+|--------|-------------|
+| Weak supervision labeling | 17 labeling functions across 6 categories |
+| Rule-based entity extraction | CVEs, IPs, hashes, domains |
+| SecureBERT 2.0 NER | Threat actors, malware, organizations |
+| Relation extraction | exploits, uses, targets relationships |
+| Entity normalization | Deduplication and canonicalization |
+| Risk scoring | Critical / High / Medium / Low classification |
+| Evaluation utilities | Metrics against gold evaluation set |
 
-### Planned OSINT Sources
+## Next Steps
 
-The enrichment pipeline is being extended to include OSINT (Open Source Intelligence) data from multiple sources:
-
-- **Articles & Blog Posts**: Threat intelligence articles, security research blogs
-- **Social Media Feeds**: Twitter/X, Reddit, LinkedIn security discussions
-- **NIST reference URLs**: Each CVE’s reference links (e.g. on [NVD detail pages](https://nvd.nist.gov/vuln/detail/CVE-2021-44228)) are scraped; All types including GitHub are scraped; media URLs (YouTube, Vimeo) are skipped by default (metadata-only).
-- **Security Advisories**: Vendor advisories, security bulletins
-- **Threat Intelligence Feeds**: Commercial and open-source threat feeds
-
-### Status
-
-**Current Status**: 🚧 **In Development**
-
-The OSINT enrichment module is currently being designed and implemented. This will add contextual information from open sources to complement the structured CVE/CWE/VulnCheck data, providing a more complete threat intelligence picture.
-
-### Integration Plan
-
-Once implemented, OSINT enrichment will:
-1. Extract CVEs/CWEs mentioned in OSINT sources
-2. Link OSINT content to relevant CVE records
-3. Provide additional context (exploit discussions, real-world usage, community insights)
-4. Store enriched OSINT data alongside CVE enrichment data
-
-**Note**: This feature is actively being developed and will be integrated into the enrichment pipeline in a future release.
+1. Run the NLP enrichment pipeline on the 600-document corpus
+2. Evaluate weak supervision labels against the gold set (target F1 > 0.7)
+3. Upload enriched outputs to S3 under `nlp/enriched/`
+4. If F1 < 0.7, upgrade to Snorkel LabelModel or fine-tune SecureBERT 2.0

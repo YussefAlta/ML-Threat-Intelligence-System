@@ -755,22 +755,12 @@ The enriched data is now ready for:
 
 ---
 
-## 🚧 **Future: OSINT Enrichment**
+## OSINT and NLP Enrichment
 
-### Planned Enhancement
+The enrichment pipeline has been extended beyond CWE and VulnCheck with two additional stages:
 
-The enrichment pipeline will be extended to include OSINT (Open Source Intelligence) enrichment from multiple sources:
+**NVD Reference Scraping** (operational): The `NVDReferenceScraperEnricher` fetches, classifies, and cleans reference URLs from CVE records. Content is stored under `enriched/cve/ref_links/{date}/{raw,clean,meta}/` in S3. See [NVD Reference Enrichment](./NVD_REFERENCE_ENRICHMENT.md) for details.
 
-- **Articles & Blog Posts**: Threat intelligence articles, security research blogs
-- **Social Media Feeds**: Twitter/X, Reddit, LinkedIn security discussions  
-- **GitHub Repositories**: Security tools, proof-of-concepts, vulnerability reports
-- **Security Advisories**: Vendor advisories, security bulletins
-- **Threat Intelligence Feeds**: Commercial and open-source threat feeds
+**OSINT Corpus Ingestion** (operational): Five new ingesters pull threat intelligence from diverse open sources -- PhishTank (phishing), ransomwatch (ransomware), MITRE ATT&CK (threat actors), ExploitDB (exploits), and AlienVault OTX (IOCs). Each normalizes its output into a unified document schema. The combined corpus of 600 documents is stored locally in `data/corpus/combined_corpus.jsonl` and can be uploaded to S3 under `osint/corpus/`.
 
-**Status**: 🚧 **Currently in Development**This OSINT enrichment will extract CVEs/CWEs mentioned in open sources and link them to CVE records, providing additional context such as:
-- Exploit discussions and real-world usage examples
-- Community insights and analysis
-- Proof-of-concept availability
-- Vendor and researcher commentary
-
-Once implemented, OSINT enrichment will be integrated into the `NISTEnrichmentOrchestrator` alongside CWE and VulnCheck enrichment.
+**NLP Enrichment Pipeline** (code complete, pending execution): A full NLP enrichment layer classifies documents across six threat categories using weak supervision, extracts entities via regex and SecureBERT 2.0 NER, identifies relations between entities, and assigns risk tiers. See [NLP Architecture Plan](./NLP_ARCHITECTURE_PLAN.md) for the full design and sprint roadmap.

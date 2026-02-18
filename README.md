@@ -1,91 +1,123 @@
 # ML Threat Intelligence System
 
-A production-ready threat intelligence system that ingests CVE (Common Vulnerabilities and Exposures) and CPE (Common Platform Enumeration) data from NIST's National Vulnerability Database (NVD) API and enriches it with detailed context from MITRE CWE and VulnCheck APIs.
+A production-grade threat intelligence pipeline that ingests vulnerability data from NIST NVD, collects OSINT from five external sources, and applies NLP enrichment for automated document classification, entity extraction, relation mapping, and risk scoring.
 
-## 🎯 Overview
+## Overview
 
-This system provides a comprehensive pipeline for:
-- **Ingesting** CVE/CPE data from NIST NVD API
-- **Enriching** CVE data with detailed weakness information (MITRE CWE)
-- **Enriching** CVE data with exploit intelligence (VulnCheck)
-- **Storing** all data in AWS S3 with organized date-based structure
-- **Managing** rate limits, retries, and error handling automatically
+This system provides an end-to-end pipeline for building a structured threat intelligence corpus:
 
-## 🏗️ System Architecture
+- **Ingest** CVE/CPE records from the NIST National Vulnerability Database API
+- **Enrich** CVE data with weakness details (MITRE CWE) and exploit intelligence (VulnCheck)
+- **Scrape** NVD reference URLs for advisory content, patch notes, and write-ups
+- **Collect** OSINT from PhishTank, ransomwatch, MITRE ATT&CK, ExploitDB, and AlienVault OTX
+- **Classify** documents across six threat categories using weak supervision (Snorkel)
+- **Extract** structured entities (CVEs, IPs, hashes, threat actors, malware) via regex and SecureBERT NER
+- **Map** relationships between entities (exploits, uses, targets)
+- **Score** risk with tier assignment (Critical / High / Medium / Low)
+- **Store** all outputs in AWS S3 with date-based organization
+
+## System Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    Threat Intelligence System                │
-└─────────────────────────────────────────────────────────────┘
+                          ┌──────────────────────────────────────┐
+                          │     ML Threat Intelligence System     │
+                          └──────────────────────────────────────┘
 
-┌─────────────────┐
-│  NIST NVD API   │
-│  (CVE/CPE Data) │
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐      ┌──────────────────┐
-│  NIST Ingesters │─────▶│  S3 Storage      │
-│  (API Clients)  │      │  (Raw Data)      │
-└─────────────────┘      └────────┬─────────┘
-                                  │
-                                  ▼
-┌─────────────────┐      ┌──────────────────┐
-│  Enrichment     │─────▶│  S3 Storage      │
-│  Orchestrator   │      │  (Enriched Data)  │
-└─────────────────┘      └──────────────────┘
-         │
-         ├─▶ MITRE CWE API (Weakness Details)
-         └─▶ VulnCheck API (Exploit Intelligence)
+  Data Sources                  Pipeline                        Storage
+ ─────────────────       ─────────────────────            ───────────────
+ NIST NVD API ──────┐
+                     ├──▶ NIST Ingesters ──────────────▶ S3: nist/cve/, nist/cpe/
+ MITRE CWE API ─────┤
+ VulnCheck API ─────┤
+                     ├──▶ Enrichment Layer ────────────▶ S3: enriched/cve/cwe/
+ NVD Reference URLs ┤                                       enriched/cve/vulncheck/
+                     │                                       enriched/cve/ref_links/
+ PhishTank ─────────┤
+ ransomwatch ───────┤
+ MITRE ATT&CK ─────┼──▶ OSINT Ingesters ──────────────▶ S3: osint/corpus/
+ ExploitDB ─────────┤
+ AlienVault OTX ────┘
+                          │
+                          ▼
+                     NLP Pipeline
+                     ├─ Weak Supervision (Snorkel LFs) ─▶ Document Labels
+                     ├─ Entity Extraction (Regex + NER) ─▶ Structured Entities
+                     ├─ Relation Extraction ─────────────▶ Entity Relationships
+                     └─ Risk Scoring ────────────────────▶ S3: nlp/enriched/
 ```
 
-## 📦 Key Components
+## Key Components
 
-### 1. **Data Ingestion** (`ingesters/`)
-- **NISTCVEIngester**: Fetches CVE data from NIST NVD API
-- **NISTCPEIngester**: Fetches CPE data from NIST NVD API
-- Features: Pagination, rate limiting, retry logic, date filtering
+### 1. NIST Data Ingestion (`ingesters/`)
 
-### 2. **Data Enrichment** (`enrichment/`)
-- **CWEEnricher**: Enriches CVEs with MITRE CWE weakness details
-- **VulnCheckEnricher**: Adds exploit intelligence from VulnCheck
-- Features: Caching, error handling, relationship mapping
+- **NISTCVEIngester** -- fetches CVE records from NVD API with pagination, date filtering, and retry logic
+- **NISTCPEIngester** -- fetches CPE records from NVD API
 
-### 3. **Orchestration** (`orchestrators/`)
-- **NISTIngestionOrchestrator**: Coordinates CVE/CPE ingestion
-- **NISTEnrichmentOrchestrator**: Coordinates enrichment workflow
-- Features: Error isolation, progress tracking, batch processing
+### 2. CVE Enrichment (`enrichment/`)
 
-### 4. **Storage** (`storage/`)
-- **DataStorage**: Manages S3 and local storage
-- Features: Date-based organization, metadata tracking, deduplication
+- **CWEEnricher** -- maps CWE IDs to full weakness details from MITRE (descriptions, mitigations, consequences, relationships)
+- **VulnCheckEnricher** -- adds exploit intelligence, proof-of-concept availability, and active threat context
+- **NVD Reference Scraper** -- fetches and classifies reference URLs from CVE records, extracts HTML/PDF content with quality scoring, stores raw text, cleaned text, and metadata under `enriched/cve/ref_links/`
 
-### 5. **Utilities** (`utils/`)
-- **APIClient**: Handles rate limiting, retries, error handling
-- **RateLimiter**: Token bucket algorithm for API quotas
+### 3. OSINT Collection (`ingesters/`)
 
-## 🚀 Quick Start
+Five operational collectors that normalize output to a unified document schema:
+
+| Source | Data Collected |
+|---|---|
+| **PhishTank** | Phishing URLs with target brand metadata |
+| **ransomwatch** | Ransomware group leak site activity |
+| **MITRE ATT&CK** | Threat actor intrusion sets with techniques and malware |
+| **ExploitDB** | Exploit descriptions, platforms, and metadata |
+| **AlienVault OTX** | Threat intelligence pulses with IOCs |
+
+The assembled corpus contains approximately 600 documents across six categories (Vulnerability, Exploit, Phishing, Ransomware, Threat Actor, IOC).
+
+### 4. NLP Enrichment (`nlp/`)
+
+Sprint 1 of the NLP pipeline is code-complete and includes:
+
+- **Weak Supervision** -- 17 labeling functions across 6 categories, aggregated via Snorkel's label model to produce probabilistic document labels
+- **Entity Extraction** -- hybrid approach combining regex patterns for structured entities (CVE IDs, IP addresses, file hashes, URLs) with SecureBERT 2.0 NER for soft entities (threat actors, malware families, organizations)
+- **Relation Extraction** -- rule-based extraction of typed relationships (exploits, uses, targets) between entity pairs
+- **Entity Normalization** -- canonicalization of vendor names, threat actor aliases, and malware families
+- **Risk Scoring** -- composite scoring with tier assignment (Critical / High / Medium / Low)
+- **Evaluation** -- gold evaluation set of 100 stratified labeled documents with precision, recall, and F1 utilities per category
+
+### 5. Orchestration (`orchestrators/`)
+
+- **NISTIngestionOrchestrator** -- coordinates CVE/CPE ingestion workflows
+- **NISTEnrichmentOrchestrator** -- coordinates CWE and VulnCheck enrichment
+- **OSINTOrchestrator** -- coordinates OSINT collection across all five sources
+
+### 6. Storage (`storage/`)
+
+- **DataStorage** -- S3 and local storage with date-based organization, metadata tracking, and deduplication
+- **ReferenceStorage** -- manages NVD reference scraping outputs
+- **CorpusStorage** -- manages OSINT corpus storage and retrieval
+
+### 7. Utilities (`utils/`)
+
+- **APIClient** -- handles rate limiting, retries with exponential backoff, and error handling
+- **RateLimiter** -- token bucket algorithm for API quota management
+
+## Quick Start
 
 ### Prerequisites
 
 - Python 3.8+
-- AWS S3 bucket (optional, for cloud storage)
-- API Keys (optional, for higher rate limits):
-  - NIST API Key (optional, but recommended)
-  - VulnCheck API Key (required for VulnCheck enrichment)
+- AWS S3 bucket (optional; the system falls back to local storage)
+- API keys listed below (some optional)
 
 ### Installation
 
 ```bash
-# Clone the repository
 git clone https://github.com/YussefAlta/ML-Threat-Intelligence-System.git
 cd ML-Threat-Intelligence-System
 
-# Create virtual environment
 python3 -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 
-# Install dependencies
 pip install -r requirements.txt
 ```
 
@@ -104,11 +136,19 @@ CWE_API_BASE_URL=https://cwe-api.mitre.org/api/v1/
 VULNCHECK_API_KEY=your_vulncheck_api_key_here
 VULNCHECK_API_BASE_URL=https://api.vulncheck.com/v3/
 
-# AWS S3 Configuration (required for cloud storage)
+# AWS S3
 AWS_ACCESS_KEY_ID=your_aws_access_key
 AWS_SECRET_ACCESS_KEY=your_aws_secret_key
 AWS_REGION=us-east-1
 S3_BUCKET_NAME=your-bucket-name
+
+# OSINT Sources
+PHISHTANK_API_KEY=your_phishtank_api_key  # optional
+OTX_API_KEY=your_otx_api_key              # required for AlienVault OTX
+
+# NLP Models
+SECUREBERT_MODEL_NAME=jackaduma/SecBERT    # or custom checkpoint
+SECUREBERT_NER_MODEL_NAME=jackaduma/SecBERT # or NER-specific checkpoint
 ```
 
 ### Basic Usage
@@ -122,7 +162,6 @@ from src.threat_intelligence.orchestrators.nist_ingestion import NISTIngestionOr
 config = Config()
 orchestrator = NISTIngestionOrchestrator(config)
 
-# Ingest recent CVEs (last 7 days)
 result = orchestrator.ingest_cves(days_back=7, max_count=100)
 print(f"Ingested {result['records_fetched']} CVEs")
 ```
@@ -136,12 +175,10 @@ from src.threat_intelligence.storage.data_storage import DataStorage
 config = Config()
 storage = DataStorage(config)
 
-# Load CVEs from S3
 latest_key = storage.get_latest_nist_cve_s3_key()
 data = storage.load_json_from_s3(latest_key)
-cves = data.get("vulnerabilities", [])[:10]  # First 10 CVEs
+cves = data.get("vulnerabilities", [])[:10]
 
-# Enrich with CWE and VulnCheck
 orchestrator = NISTEnrichmentOrchestrator(config)
 results = orchestrator.enrich_cves(
     cve_records=cves,
@@ -153,145 +190,115 @@ print(f"CWE enrichment: {results['cwe']['records']} records")
 print(f"VulnCheck enrichment: {results['vulncheck']['records']} records")
 ```
 
-## 📚 Documentation
+#### Collect OSINT Corpus
 
-- **[Architecture Guide](docs/ARCHITECTURE.md)**: Detailed system architecture and design
-- **[Phase 1: NIST Ingestion](docs/PHASE1_NIST_INGESTION.md)**: CVE/CPE data ingestion implementation
-- **[Phase 2: CVE Enrichment](docs/PHASE2_CVE_ENRICHMENT.md)**: CWE and VulnCheck enrichment implementation
-- **[Enrichment Pipeline Status](docs/ENRICHMENT_PIPELINE_STATUS.md)**: Current pipeline status and data flow
+```python
+from src.threat_intelligence.orchestrators.osint_orchestrator import OSINTOrchestrator
 
-## 🧪 Testing
+config = Config()
+orchestrator = OSINTOrchestrator(config)
+
+results = orchestrator.collect_all()
+for source, result in results.items():
+    print(f"{source}: {result['documents']} documents")
+```
+
+## Testing
 
 ```bash
-# Test NIST ingestion
+# NIST ingestion tests
 python scripts/test_nist_ingestion.py --test all --max-count 10
 
-# Test enrichment pipeline
+# Enrichment pipeline tests
 python scripts/test_phase2_enrichment.py
 
-# Test individual enrichment APIs
+# Individual enrichment API tests
 python scripts/test_enrichment_simple.py
 ```
 
-## 📊 Data Flow
+## S3 Storage Layout
 
-### Ingestion Flow
+```
+S3 Bucket/
+├── nist/
+│   ├── cve/YYYY/MM/DD/          # Raw CVE records from NVD
+│   └── cpe/YYYY/MM/DD/          # Raw CPE records from NVD
+├── enriched/cve/
+│   ├── cwe/YYYY/MM/DD/          # CWE weakness details
+│   ├── vulncheck/YYYY/MM/DD/    # VulnCheck exploit intelligence
+│   └── ref_links/{date}/        # NVD reference URL content
+│       ├── raw/                  #   Raw extracted text
+│       ├── clean/                #   Cleaned text
+│       └── meta/                 #   Classification and quality metadata
+├── osint/corpus/YYYY/MM/DD/     # OSINT documents (unified schema)
+└── nlp/enriched/{date}/         # NLP pipeline output
+```
 
-1. **NISTCVEIngester** fetches CVE data from NIST NVD API
-   - Handles pagination automatically
-   - Respects rate limits (5 requests/30 seconds without API key)
-   - Retries on failures with exponential backoff
-   - Filters by publication date or modification date
-
-2. **DataStorage** saves raw CVE data to S3
-   - Organized by date: `nist/cve/YYYY/MM/DD/`
-   - Includes metadata: source, record count, ingestion timestamp
-
-### Enrichment Flow
-
-1. **NISTEnrichmentOrchestrator** loads CVEs from S3
-2. **CWEEnricher** extracts CWE IDs from CVEs and fetches full details from MITRE
-   - Adds descriptions, mitigations, consequences, relationships
-3. **VulnCheckEnricher** fetches exploit intelligence for each CVE
-   - Handles 404s gracefully (not all CVEs exist in VulnCheck)
-4. **DataStorage** saves enriched data to S3
-   - Organized by date: `enriched/cve/cwe/YYYY/MM/DD/`
-   - Organized by date: `enriched/cve/vulncheck/YYYY/MM/DD/`
-
-## 🔑 Key Features
-
-### Robust API Handling
-- **Rate Limiting**: Automatic rate limit management for all APIs
-- **Retry Logic**: Exponential backoff for transient failures
-- **Error Handling**: Graceful handling of 404s, timeouts, and API errors
-- **Caching**: In-memory caching to avoid duplicate API calls
-
-### Scalable Storage
-- **S3 Integration**: Cloud storage with date-based organization
-- **Local Fallback**: Works without S3 (saves locally)
-- **Metadata Tracking**: Full audit trail of ingestion and enrichment
-
-### Production Ready
-- **Comprehensive Logging**: Detailed logs for debugging and monitoring
-- **Idempotent Operations**: Safe to re-run without duplicating data
-- **Incremental Updates**: Fetch only new/modified records
-- **Batch Processing**: Efficient handling of large datasets
-
-### Future Enhancements 🚧
-- **NVD Reference Scraping**: Fetches and classifies reference URLs from NIST CVE records (advisory, GitHub advisory/commit/issue, media, code, etc.); all types including GitHub are scraped; media URLs are skipped by default. **OSINT Enrichment** (In Development): Articles, social media, and other open sources
-- Real-time ingestion and streaming
-- ML-based vulnerability prioritization
-- Dashboard and visualization tools
-
-## 📁 Project Structure
+## Project Structure
 
 ```
 ML-Threat-Intelligence-System/
 ├── src/threat_intelligence/
 │   ├── core/              # Configuration management
-│   ├── ingesters/         # NIST API clients (CVE/CPE)
-│   ├── enrichment/        # CWE and VulnCheck enrichers
-│   ├── orchestrators/     # Workflow coordination
-│   ├── storage/           # S3 and local storage
+│   ├── ingesters/         # NIST + OSINT ingesters (7 total)
+│   ├── enrichment/        # CWE, VulnCheck, NVD reference scraping
+│   ├── nlp/               # NLP pipeline (labeling, NER, relations, risk scoring)
+│   ├── orchestrators/     # Workflow coordination (NIST + OSINT)
+│   ├── storage/           # S3 storage (data, reference, corpus)
 │   └── utils/             # API client, rate limiter
-├── scripts/               # Test and utility scripts
+├── scripts/               # Run scripts and utilities
+├── data/                  # Corpus and gold evaluation set
 ├── docs/                  # Documentation
 ├── tests/                 # Unit and integration tests
-└── requirements.txt       # Python dependencies
+├── aws/                   # IAM policies
+└── requirements.txt
 ```
 
-## 🔧 Configuration Options
+## Dependencies
 
-See `src/threat_intelligence/core/config.py` for all configuration options:
+Key Python packages:
 
-- **NIST API**: Rate limits, retries, results per page
-- **CWE API**: Rate limits, retries
-- **VulnCheck API**: Rate limits, retries
-- **AWS S3**: Region, bucket name, credentials
-- **Storage**: Local data directory paths
+- `requests`, `feedparser` -- HTTP and RSS ingestion
+- `boto3` -- AWS S3 storage
+- `beautifulsoup4`, `langdetect`, `PyPDF2` -- content extraction and cleaning
+- `transformers`, `torch` -- SecureBERT NER models
+- `snorkel` -- weak supervision label aggregation
+- `spacy`, `regex` -- NLP tokenization and pattern matching
 
-## 📈 What Gets Enriched?
+See `requirements.txt` for the full list with pinned versions.
 
-### NIST Provides (Raw CVE Data)
-- CVE ID, description, severity scores
-- **CWE IDs only** (e.g., "CWE-79") - just the identifier
-- Affected products (CPE references)
-- References and advisories
+## Documentation
 
-### Our Enrichment Adds
+- [Architecture Guide](docs/ARCHITECTURE.md) -- system architecture and design
+- [Phase 1: NIST Ingestion](docs/PHASE1_NIST_INGESTION.md) -- CVE/CPE data ingestion
+- [Phase 2: CVE Enrichment](docs/PHASE2_CVE_ENRICHMENT.md) -- CWE and VulnCheck enrichment
+- [NVD Reference Enrichment](docs/NVD_REFERENCE_ENRICHMENT.md) -- NVD reference URL scraping
+- [NLP Architecture Plan](docs/NLP_ARCHITECTURE_PLAN.md) -- NLP architecture and sprint roadmap
+- [Enrichment Pipeline Status](docs/ENRICHMENT_PIPELINE_STATUS.md) -- pipeline status overview
 
-**From MITRE CWE API:**
-- Full weakness descriptions and extended descriptions
-- Common consequences (impact analysis)
-- Potential mitigations (how to fix/prevent)
-- Demonstrative examples (real-world scenarios)
-- Detection methods
-- Parent/child relationships (weakness hierarchy)
-- 20+ additional fields
+## Next Steps
 
-**From VulnCheck API:**
-- Exploit intelligence
-- Proof-of-concept availability
-- Active threat context
-- Vulnerability prioritization data
+- Run the NLP pipeline end-to-end on the assembled OSINT corpus
+- Evaluate classification and extraction quality against the gold evaluation set
+- Tune Snorkel label model parameters based on evaluation metrics
+- Explore fine-tuning SecureBERT NER on domain-specific labeled data
+- Add real-time ingestion and streaming capabilities
+- Build a dashboard for visualization and monitoring
 
-**From OSINT Sources** 🚧 (In Development):
-- Articles and blog posts mentioning CVEs
-- Social media discussions (Twitter/X, Reddit, LinkedIn)
-- Reference articles and advisories linked from NIST NVD (e.g. vendor advisories, writeups; GitHub repos are excluded)
-- Security advisories and bulletins
-- Community insights and analysis
-
-## 🤝 Contributing
+## Contributing
 
 This is a project for AVINT. For questions or issues, please contact the project maintainers.
 
-## 📄 License
+## License
 
 [Specify your license here]
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
-- **NIST NVD**: For providing comprehensive CVE/CPE data
-- **MITRE**: For CWE weakness enumeration data
-- **VulnCheck**: For exploit intelligence data
+- **NIST NVD** -- comprehensive CVE/CPE vulnerability data
+- **MITRE** -- CWE weakness enumeration and ATT&CK framework
+- **VulnCheck** -- exploit intelligence
+- **PhishTank** -- phishing URL intelligence
+- **ransomwatch** -- ransomware leak site monitoring
+- **ExploitDB** -- public exploit archive
+- **AlienVault OTX** -- open threat intelligence exchange
