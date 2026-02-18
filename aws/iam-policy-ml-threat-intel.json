@@ -1,0 +1,54 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "AllowS3BucketListing",
+            "Effect": "Allow",
+            "Action": [
+                "s3:ListBucket",
+                "s3:GetBucketLocation"
+            ],
+            "Resource": "arn:aws:s3:::avint-scraper-bucket-raw"
+        },
+        {
+            "Sid": "AllowS3ObjectOperations",
+            "Effect": "Allow",
+            "Action": [
+                "s3:GetObject",
+                "s3:PutObject",
+                "s3:ListMultipartUploadParts",
+                "s3:AbortMultipartUpload"
+            ],
+            "Resource": "arn:aws:s3:::avint-scraper-bucket-raw/*"
+        },
+        {
+            "Sid": "DenyAllOtherS3Buckets",
+            "Effect": "Deny",
+            "Action": "s3:*",
+            "NotResource": [
+                "arn:aws:s3:::avint-scraper-bucket-raw",
+                "arn:aws:s3:::avint-scraper-bucket-raw/*"
+            ]
+        },
+        {
+            "Sid": "DenyDangerousActions",
+            "Effect": "Deny",
+            "Action": [
+                "s3:DeleteBucket",
+                "s3:DeleteBucketPolicy",
+                "s3:PutBucketPolicy",
+                "s3:PutBucketAcl",
+                "s3:DeleteObject",
+                "s3:DeleteObjectVersion",
+                "iam:*",
+                "organizations:*",
+                "account:*",
+                "billing:*",
+                "budgets:*",
+                "cur:*",
+                "ce:*"
+            ],
+            "Resource": "*"
+        }
+    ]
+}

@@ -8,3 +8,20 @@ urllib3>=2.0.0
 langdetect>=1.0.9
 PyPDF2>=3.0.0
 charset-normalizer>=3.0.0
+
+# OSINT Source Collection
+feedparser>=6.0.0
+
+# NLP / ML
+transformers>=4.40.0
+torch>=2.0.0
+tokenizers>=0.19.0
+
+# Weak supervision
+snorkel>=0.9.9
+
+# Entity extraction
+regex>=2023.0.0
+
+# Tokenization
+spacy>=3.7.0

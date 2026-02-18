@@ -2,11 +2,20 @@
 Configuration management for the ML Threat Intelligence System.
 """
 import os
-from dotenv import load_dotenv
 
-# Load environment variables from .env and .env.local files
-load_dotenv()  # Loads .env
-load_dotenv('.env.local')  # Loads .env.local (overrides .env)
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+    load_dotenv('.env.local')
+except ImportError:
+    _env_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', '.env.local')
+    if os.path.exists(_env_path):
+        with open(_env_path) as _f:
+            for _line in _f:
+                _line = _line.strip()
+                if _line and not _line.startswith('#') and '=' in _line:
+                    _k, _, _v = _line.partition('=')
+                    os.environ.setdefault(_k.strip(), _v.strip())
 
 class Config:
     """Configuration class for the threat intelligence system."""
@@ -55,6 +64,42 @@ class Config:
     NVD_REF_USER_AGENT = os.getenv('NVD_REF_USER_AGENT', 'ML-Threat-Intelligence-System/1.0')
     NVD_REF_SKIP_MEDIA = os.getenv('NVD_REF_SKIP_MEDIA', 'True').lower() == 'true'
     NVD_REF_MIN_USEFUL_TEXT_LENGTH = int(os.getenv('NVD_REF_MIN_USEFUL_TEXT_LENGTH', '50'))
+
+    # OSINT Corpus Configuration
+    OSINT_CORPUS_S3_PREFIX = os.getenv('OSINT_CORPUS_S3_PREFIX', 'osint/corpus')
+    OSINT_CORPUS_LOCAL_DIR = os.path.join(DATA_DIR, 'corpus')
+
+    # PhishTank Configuration
+    PHISHTANK_API_KEY = os.getenv('PHISHTANK_API_KEY')
+    PHISHTANK_FEED_URL = os.getenv('PHISHTANK_FEED_URL', 'http://data.phishtank.com/data/online-valid.json')
+    PHISHTANK_RATE_LIMIT_REQUESTS = int(os.getenv('PHISHTANK_RATE_LIMIT_REQUESTS', '5'))
+    PHISHTANK_RATE_LIMIT_WINDOW = int(os.getenv('PHISHTANK_RATE_LIMIT_WINDOW', '60'))
+
+    # Ransomwatch Configuration
+    RANSOMWATCH_FEED_URL = os.getenv('RANSOMWATCH_FEED_URL', 'https://raw.githubusercontent.com/joshhighet/ransomwatch/main/posts.json')
+    RANSOMWATCH_GROUPS_URL = os.getenv('RANSOMWATCH_GROUPS_URL', 'https://raw.githubusercontent.com/joshhighet/ransomwatch/main/groups.json')
+
+    # MITRE ATT&CK Configuration
+    MITRE_ATTACK_URL = os.getenv('MITRE_ATTACK_URL', 'https://raw.githubusercontent.com/mitre/cti/master/enterprise-attack/enterprise-attack.json')
+
+    # AlienVault OTX Configuration
+    OTX_API_KEY = os.getenv('OTX_API_KEY')
+    OTX_API_BASE_URL = os.getenv('OTX_API_BASE_URL', 'https://otx.alienvault.com/api/v1/')
+    OTX_RATE_LIMIT_REQUESTS = int(os.getenv('OTX_RATE_LIMIT_REQUESTS', '10'))
+    OTX_RATE_LIMIT_WINDOW = int(os.getenv('OTX_RATE_LIMIT_WINDOW', '60'))
+    OTX_PULSE_LIMIT = int(os.getenv('OTX_PULSE_LIMIT', '100'))
+
+    # ExploitDB Configuration
+    EXPLOITDB_CSV_URL = os.getenv('EXPLOITDB_CSV_URL', 'https://gitlab.com/exploit-database/exploitdb/-/raw/main/files_exploits.csv')
+    EXPLOITDB_BASE_URL = os.getenv('EXPLOITDB_BASE_URL', 'https://www.exploit-db.com/')
+    EXPLOITDB_RATE_LIMIT_REQUESTS = int(os.getenv('EXPLOITDB_RATE_LIMIT_REQUESTS', '5'))
+    EXPLOITDB_RATE_LIMIT_WINDOW = int(os.getenv('EXPLOITDB_RATE_LIMIT_WINDOW', '60'))
+
+    # NLP Configuration
+    NLP_ENRICHED_S3_PREFIX = os.getenv('NLP_ENRICHED_S3_PREFIX', 'nlp/enriched')
+    SECUREBERT_MODEL_NAME = os.getenv('SECUREBERT_MODEL_NAME', 'cisco-ai/SecureBERT2.0-base')
+    SECUREBERT_NER_MODEL_NAME = os.getenv('SECUREBERT_NER_MODEL_NAME', 'cisco-ai/SecureBERT2.0-NER')
+    SECUREBERT_MAX_TOKENS = int(os.getenv('SECUREBERT_MAX_TOKENS', '7500'))
 
     # Legacy (only for scrapers.base_scraper; not used by current pipeline)
     FOLLOW_LINKS = os.getenv('FOLLOW_LINKS', 'False').lower() == 'true'
