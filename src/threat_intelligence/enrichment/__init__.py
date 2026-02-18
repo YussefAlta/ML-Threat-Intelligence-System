@@ -10,11 +10,14 @@ Phase 2 focuses on:
 from .cwe_enricher import CWEEnricher
 from .vulncheck_enricher import VulnCheckEnricher
 from .nvd_reference_scraper import NVDReferenceScraperEnricher
+from .reference_classifier import classify_url, classify_with_content_hint
 
 __all__ = [
     "CWEEnricher",
     "VulnCheckEnricher",
     "NVDReferenceScraperEnricher",
+    "classify_url",
+    "classify_with_content_hint",
 ]
 
 

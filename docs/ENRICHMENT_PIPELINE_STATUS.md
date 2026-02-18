@@ -132,7 +132,7 @@ The enrichment pipeline is being extended to include OSINT (Open Source Intellig
 
 - **Articles & Blog Posts**: Threat intelligence articles, security research blogs
 - **Social Media Feeds**: Twitter/X, Reddit, LinkedIn security discussions
-- **NIST reference URLs only**: Each CVE’s reference links (e.g. on [NVD detail pages](https://nvd.nist.gov/vuln/detail/CVE-2021-44228)) are scraped; GitHub URLs are skipped (repos often lack useful CVE content).
+- **NIST reference URLs**: Each CVE’s reference links (e.g. on [NVD detail pages](https://nvd.nist.gov/vuln/detail/CVE-2021-44228)) are scraped; All types including GitHub are scraped; media URLs (YouTube, Vimeo) are skipped by default (metadata-only).
 - **Security Advisories**: Vendor advisories, security bulletins
 - **Threat Intelligence Feeds**: Commercial and open-source threat feeds
 

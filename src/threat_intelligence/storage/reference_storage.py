@@ -2,7 +2,7 @@
 S3 storage utilities for NVD reference content.
 
 Stores raw fetched content, cleaned text, and metadata for CVE reference URLs
-in the enrichments/nvd_references/ prefix.
+under enriched/cve/ref_links/(date ingested)/.
 """
 
 from __future__ import annotations
@@ -28,7 +28,8 @@ CONTENT_TYPE_EXT = {
 }
 
 DEFAULT_EXT = ".bin"
-ROOT_PREFIX = "enrichments/nvd_references"
+# Base path: enriched/cve/ref_links/(date ingested)
+REF_LINKS_PREFIX = "enriched/cve/ref_links"
 
 
 class ReferenceStorage:
@@ -85,18 +86,17 @@ class ReferenceStorage:
         Returns:
             S3 key path
         """
-        year = fetch_date.strftime("%Y")
-        month = fetch_date.strftime("%m")
-        day = fetch_date.strftime("%d")
+        # Date ingested (YYYY-MM-DD) for path: enriched/cve/ref_links/(date ingested)
+        date_ingested = fetch_date.strftime("%Y-%m-%d")
         ref_str = f"{ref_index:03d}"
 
         if folder == "raw":
             ext = self._get_extension_for_content_type(content_type)
-            return f"{ROOT_PREFIX}/raw/{cve_id}/{year}/{month}/{day}/{ref_str}_{url_hash}{ext}"
+            return f"{REF_LINKS_PREFIX}/{date_ingested}/raw/{cve_id}/{ref_str}_{url_hash}{ext}"
         elif folder == "clean":
-            return f"{ROOT_PREFIX}/clean/{cve_id}/{year}/{month}/{day}/{ref_str}_{url_hash}.txt"
+            return f"{REF_LINKS_PREFIX}/{date_ingested}/clean/{cve_id}/{ref_str}_{url_hash}.txt"
         elif folder == "meta":
-            return f"{ROOT_PREFIX}/meta/{cve_id}/{year}/{month}/{day}/{ref_str}_{url_hash}.json"
+            return f"{REF_LINKS_PREFIX}/{date_ingested}/meta/{cve_id}/{ref_str}_{url_hash}.json"
         else:
             raise ValueError(f"Unknown folder: {folder}")
 

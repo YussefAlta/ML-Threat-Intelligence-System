@@ -39,12 +39,6 @@ class Config:
     AWS_REGION = os.getenv('AWS_REGION', 'us-east-1')
     S3_BUCKET_NAME = os.getenv('S3_BUCKET_NAME')
     
-    # Scraping Configuration
-    MAX_POSTS_PER_SOURCE = int(os.getenv('MAX_POSTS_PER_SOURCE', '100'))
-    FOLLOW_LINKS = os.getenv('FOLLOW_LINKS', 'True').lower() == 'true'
-    MAX_LINK_DEPTH = int(os.getenv('MAX_LINK_DEPTH', '2'))
-    REQUEST_DELAY = float(os.getenv('REQUEST_DELAY', '1.0'))
-    
     # Data Storage
     DATA_DIR = os.getenv('DATA_DIR', 'data')
     RAW_DATA_DIR = os.path.join(DATA_DIR, 'raw')
@@ -59,8 +53,12 @@ class Config:
     NVD_REF_DEDUPE_TTL_DAYS = int(os.getenv('NVD_REF_DEDUPE_TTL_DAYS', '30'))
     NVD_REF_MAX_CHUNK_SIZE = int(os.getenv('NVD_REF_MAX_CHUNK_SIZE', '1048576'))  # 1MB
     NVD_REF_USER_AGENT = os.getenv('NVD_REF_USER_AGENT', 'ML-Threat-Intelligence-System/1.0')
-    # Skip GitHub reference URLs (repos often have minimal CVE value; use other NIST refs only)
-    NVD_REF_SKIP_GITHUB = os.getenv('NVD_REF_SKIP_GITHUB', 'True').lower() == 'true'
+    NVD_REF_SKIP_MEDIA = os.getenv('NVD_REF_SKIP_MEDIA', 'True').lower() == 'true'
+    NVD_REF_MIN_USEFUL_TEXT_LENGTH = int(os.getenv('NVD_REF_MIN_USEFUL_TEXT_LENGTH', '50'))
+
+    # Legacy (only for scrapers.base_scraper; not used by current pipeline)
+    FOLLOW_LINKS = os.getenv('FOLLOW_LINKS', 'False').lower() == 'true'
+    REQUEST_DELAY = float(os.getenv('REQUEST_DELAY', '1.0'))
 
     @classmethod
     def validate(cls):

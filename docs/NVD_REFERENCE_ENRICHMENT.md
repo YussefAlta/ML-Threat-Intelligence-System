@@ -10,7 +10,7 @@ This document describes the NVD Reference URL Scraping enrichment stage, which f
 NIST NVD API → NISTCVEIngester → DataStorage.save_cve_data()
   → S3: nist/cve/YYYY/MM/DD/
   → NISTEnrichmentOrchestrator.enrich_cves()
-    → NVDReferenceScraperEnricher (NEW) → S3: enrichments/nvd_references/
+    → NVDReferenceScraperEnricher (NEW) → S3: enriched/cve/ref_links/(date ingested)/
     → CWEEnricher → S3: enriched/cve/cwe/YYYY/MM/DD/
     → VulnCheckEnricher → S3: enriched/cve/vulncheck/YYYY/MM/DD/
 ```
@@ -21,9 +21,13 @@ The reference scraping enrichment is the **first** step in `enrich_cves()` and c
 
 ### Root Prefix
 
+Reference content is stored under the **enriched** folder, aligned with other CVE enrichments:
+
 ```
-enrichments/nvd_references/
+enriched/cve/ref_links/<date_ingested>/
 ```
+
+`<date_ingested>` is the fetch date in `YYYY-MM-DD` format.
 
 ### Subfolders
 
@@ -36,13 +40,14 @@ enrichments/nvd_references/
 ### Key Naming Pattern
 
 ```
-enrichments/nvd_references/<folder>/<cve_id>/<yyyy>/<mm>/<dd>/<ref_index>_<url_hash>.<ext>
+enriched/cve/ref_links/<date_ingested>/<folder>/<cve_id>/<ref_index>_<url_hash>.<ext>
 ```
 
 | Component | Description |
 |-----------|-------------|
+| `<date_ingested>` | Date ingested (fetch date), YYYY-MM-DD |
+| `<folder>` | One of `raw`, `clean`, `meta` |
 | `<cve_id>` | Literal CVE ID (e.g., CVE-2024-12345) |
-| `<yyyy>/<mm>/<dd>` | Fetch date (for auditing and re-runs) |
 | `<ref_index>` | Zero-padded index of reference in NVD list (000, 001, 002, …) |
 | `<url_hash>` | Short deterministic hash of normalized URL (8 chars) |
 | `<ext>` | Content type extension (.html, .pdf, .json, .txt, .bin) |
@@ -50,9 +55,9 @@ enrichments/nvd_references/<folder>/<cve_id>/<yyyy>/<mm>/<dd>/<ref_index>_<url_h
 ### Example
 
 ```
-enrichments/nvd_references/raw/CVE-2024-12345/2025/02/06/000_a1b2c3d4.html
-enrichments/nvd_references/clean/CVE-2024-12345/2025/02/06/000_a1b2c3d4.txt
-enrichments/nvd_references/meta/CVE-2024-12345/2025/02/06/000_a1b2c3d4.json
+enriched/cve/ref_links/2025-02-06/raw/CVE-2024-12345/000_a1b2c3d4.html
+enriched/cve/ref_links/2025-02-06/clean/CVE-2024-12345/000_a1b2c3d4.txt
+enriched/cve/ref_links/2025-02-06/meta/CVE-2024-12345/000_a1b2c3d4.json
 ```
 
 ## Running Locally
@@ -77,6 +82,8 @@ Set these environment variables (or use `.env`):
 | `NVD_REF_DEDUPE_TTL_DAYS` | `30` | Skip re-fetch if content exists and is newer than this |
 | `NVD_REF_MAX_CHUNK_SIZE` | `1048576` | Max chunk size for large text (1MB) |
 | `NVD_REF_USER_AGENT` | `ML-Threat-Intelligence-System/1.0` | User-Agent header |
+| `NVD_REF_SKIP_MEDIA` | `True` | Skip fetching media URLs (YouTube, Vimeo, etc.); store metadata only |
+| `NVD_REF_MIN_USEFUL_TEXT_LENGTH` | `50` | Min cleaned text length for quality label; below this marks `quality: "empty"` |
 
 ### AWS S3
 
@@ -147,21 +154,37 @@ Each metadata JSON file contains:
   "cve_id": "CVE-2024-12345",
   "ref_index": 0,
   "original_url": "https://example.com/advisory",
+  "normalized_url": "https://example.com/advisory",
   "final_url": "https://example.com/advisory",
+  "ref_type": "vendor_advisory",
   "fetch_timestamp": "2025-02-06T10:30:00Z",
   "status_code": 200,
   "content_type": "text/html",
+  "detected_encoding": "utf-8",
   "content_length": 15234,
+  "content_truncated": false,
   "content_hash_sha256": "a1b2c3d4...",
   "extraction_success": true,
   "language": "en",
   "cleaned_text_length": 12345,
+  "redirect_count": 0,
   "redirects": [],
+  "quality": {
+    "label": "good",
+    "text_length": 12345,
+    "sentence_count": 15,
+    "has_cve_mention": true,
+    "has_version_mention": true,
+    "code_ratio": 0.05
+  },
+  "extracted_title": "Security Advisory",
+  "extracted_meta_description": "A vulnerability in...",
   "error": null,
+  "http_error_detail": null,
   "s3_keys": {
-    "raw": "enrichments/nvd_references/raw/...",
-    "clean": "enrichments/nvd_references/clean/...",
-    "meta": "enrichments/nvd_references/meta/..."
+    "raw": "enriched/cve/ref_links/<date_ingested>/raw/...",
+    "clean": "enriched/cve/ref_links/<date_ingested>/clean/...",
+    "meta": "enriched/cve/ref_links/<date_ingested>/meta/..."
   }
 }
 ```

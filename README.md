@@ -218,7 +218,7 @@ python scripts/test_enrichment_simple.py
 - **Batch Processing**: Efficient handling of large datasets
 
 ### Future Enhancements 🚧
-- **NVD Reference Scraping**: Fetches reference URLs from NIST CVE records (the links on each NVD detail page); GitHub URLs are skipped. **OSINT Enrichment** (In Development): Articles, social media, and other open sources
+- **NVD Reference Scraping**: Fetches and classifies reference URLs from NIST CVE records (advisory, GitHub advisory/commit/issue, media, code, etc.); all types including GitHub are scraped; media URLs are skipped by default. **OSINT Enrichment** (In Development): Articles, social media, and other open sources
 - Real-time ingestion and streaming
 - ML-based vulnerability prioritization
 - Dashboard and visualization tools

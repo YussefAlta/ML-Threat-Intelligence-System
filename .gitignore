@@ -31,6 +31,10 @@ ENV/
 .env.local
 .env.*.local
 
+# AWS credential artifacts (never commit these)
+aws/credentials-*.txt
+aws/*.credentials
+
 # IDE
 .vscode/
 .idea/

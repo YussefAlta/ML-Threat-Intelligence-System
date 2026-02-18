@@ -753,3 +753,24 @@ The enriched data is now ready for:
 - **ML/AI Processing**: Rich structured data for machine learning models
 - **Automated Response**: Context-rich data for automated security workflows
 
+---
+
+## 🚧 **Future: OSINT Enrichment**
+
+### Planned Enhancement
+
+The enrichment pipeline will be extended to include OSINT (Open Source Intelligence) enrichment from multiple sources:
+
+- **Articles & Blog Posts**: Threat intelligence articles, security research blogs
+- **Social Media Feeds**: Twitter/X, Reddit, LinkedIn security discussions  
+- **GitHub Repositories**: Security tools, proof-of-concepts, vulnerability reports
+- **Security Advisories**: Vendor advisories, security bulletins
+- **Threat Intelligence Feeds**: Commercial and open-source threat feeds
+
+**Status**: 🚧 **Currently in Development**This OSINT enrichment will extract CVEs/CWEs mentioned in open sources and link them to CVE records, providing additional context such as:
+- Exploit discussions and real-world usage examples
+- Community insights and analysis
+- Proof-of-concept availability
+- Vendor and researcher commentary
+
+Once implemented, OSINT enrichment will be integrated into the `NISTEnrichmentOrchestrator` alongside CWE and VulnCheck enrichment.
