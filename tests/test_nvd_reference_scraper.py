@@ -335,7 +335,8 @@ class TestEnrichCvesIntegration:
         }]
         result = enricher.enrich_cves(cve_records)
         assert result["urls_processed"] == 1
-        assert result["urls_succeeded"] == 0 or result["urls_failed"] >= 0
+        assert result["urls_succeeded"] == 0
+        assert result["urls_failed"] >= 1
 
 
 if __name__ == "__main__":

@@ -122,47 +122,47 @@ class RelationExtractor:
         t1, t2 = e1.get("type", ""), e2.get("type", "")
 
         if t1 == "cve_id" and t2 in ("malware", "organization", "system"):
-            rel = self._extract_exploits(text, window, window_start, e1, e2)
+            rel = self._extract_exploits(text, window, e1, e2)
             if rel:
                 return rel
 
         if t2 == "cve_id" and t1 in ("malware", "organization", "system"):
-            rel = self._extract_exploits(text, window, window_start, e2, e1)
+            rel = self._extract_exploits(text, window, e2, e1)
             if rel:
                 return rel
 
         if t1 == "organization" and t2 == "malware":
-            rel = self._extract_uses(text, window, window_start, e1, e2)
+            rel = self._extract_uses(text, window, e1, e2)
             if rel:
                 return rel
 
         if t2 == "organization" and t1 == "malware":
-            rel = self._extract_uses(text, window, window_start, e2, e1)
+            rel = self._extract_uses(text, window, e2, e1)
             if rel:
                 return rel
 
         if t1 == "organization" and t2 in ("organization", "system"):
-            rel = self._extract_targets(text, window, window_start, e1, e2)
+            rel = self._extract_targets(text, window, e1, e2)
             if rel:
                 return rel
 
         if t2 == "organization" and t1 in ("organization", "system"):
-            rel = self._extract_targets(text, window, window_start, e2, e1)
+            rel = self._extract_targets(text, window, e2, e1)
             if rel:
                 return rel
 
         if t1 == "malware" and t2 == "malware":
-            rel = self._extract_drops(text, window, window_start, e1, e2)
+            rel = self._extract_drops(text, window, e1, e2)
             if rel:
                 return rel
 
         if t1 == "cve_id" and t2 in ("organization", "system"):
-            rel = self._extract_affects(text, window, window_start, e1, e2)
+            rel = self._extract_affects(text, window, e1, e2)
             if rel:
                 return rel
 
         if t2 == "cve_id" and t1 in ("organization", "system"):
-            rel = self._extract_affects(text, window, window_start, e2, e1)
+            rel = self._extract_affects(text, window, e2, e1)
             if rel:
                 return rel
 
@@ -172,7 +172,6 @@ class RelationExtractor:
         self,
         text: str,
         window: str,
-        window_start: int,
         cve_ent: Dict,
         other_ent: Dict,
     ) -> Optional[Dict[str, Any]]:
@@ -225,7 +224,6 @@ class RelationExtractor:
         self,
         text: str,
         window: str,
-        window_start: int,
         actor_ent: Dict,
         malware_ent: Dict,
     ) -> Optional[Dict[str, Any]]:
@@ -270,7 +268,6 @@ class RelationExtractor:
         self,
         text: str,
         window: str,
-        window_start: int,
         actor_ent: Dict,
         target_ent: Dict,
     ) -> Optional[Dict[str, Any]]:
@@ -311,7 +308,6 @@ class RelationExtractor:
         self,
         text: str,
         window: str,
-        window_start: int,
         m1_ent: Dict,
         m2_ent: Dict,
     ) -> Optional[Dict[str, Any]]:
@@ -340,7 +336,6 @@ class RelationExtractor:
         self,
         text: str,
         window: str,
-        window_start: int,
         cve_ent: Dict,
         product_ent: Dict,
     ) -> Optional[Dict[str, Any]]:

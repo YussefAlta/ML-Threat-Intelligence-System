@@ -1,5 +1,5 @@
 """
-Orchestrators for coordinating data ingestion pipelines.
+Orchestrators for coordinating data pipelines.
 """
 from .nist_ingestion import NISTIngestionOrchestrator
 
@@ -8,5 +8,20 @@ try:
 except ImportError:
     OSINTIngestionOrchestrator = None
 
-__all__ = ["NISTIngestionOrchestrator", "OSINTIngestionOrchestrator"]
+try:
+    from .nlp_enrichment import NLPEnrichmentOrchestrator
+except ImportError:
+    NLPEnrichmentOrchestrator = None
+
+try:
+    from .master_pipeline import MasterPipelineOrchestrator
+except ImportError:
+    MasterPipelineOrchestrator = None
+
+__all__ = [
+    "NISTIngestionOrchestrator",
+    "OSINTIngestionOrchestrator",
+    "NLPEnrichmentOrchestrator",
+    "MasterPipelineOrchestrator",
+]
 

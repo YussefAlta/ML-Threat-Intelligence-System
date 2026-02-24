@@ -13,9 +13,10 @@ from typing import Any, Dict, List, Optional
 from ..core.config import Config
 from ..ingesters.exploitdb_ingester import ExploitDBIngester
 from ..ingesters.mitre_attack_ingester import MITREAttackIngester
-from ..ingesters.otx_ingester import OTXIngester
 from ..ingesters.phishtank_ingester import PhishTankIngester
 from ..ingesters.ransomwatch_ingester import RansomwatchIngester
+from ..ingesters.threatfox_ingester import ThreatFoxIngester
+from ..ingesters.cisa_kev_ingester import CISAKEVIngester
 from ..storage.corpus_storage import CorpusStorage
 from ..storage.data_storage import DataStorage
 
@@ -25,8 +26,9 @@ AVAILABLE_SOURCES = [
     "phishtank",
     "ransomwatch",
     "mitre_attack",
-    "otx",
     "exploitdb",
+    "threatfox",
+    "cisa_kev",
     "nvd_refs",
 ]
 
@@ -46,8 +48,9 @@ class OSINTIngestionOrchestrator:
         self.phishtank = PhishTankIngester(self.config)
         self.ransomwatch = RansomwatchIngester(self.config)
         self.mitre_attack = MITREAttackIngester(self.config)
-        self.otx = OTXIngester(self.config)
         self.exploitdb = ExploitDBIngester(self.config)
+        self.threatfox = ThreatFoxIngester(self.config)
+        self.cisa_kev = CISAKEVIngester(self.config)
         logger.info("OSINT Ingestion Orchestrator initialized")
 
     def run_all(
@@ -87,8 +90,7 @@ class OSINTIngestionOrchestrator:
                     ingester = getattr(self, source, None)
                     if ingester is None:
                         raise ValueError(f"No ingester for source: {source}")
-                    max_records = min(100, max_per_source) if source == "otx" else max_per_source
-                    docs = ingester.ingest(max_records=max_records)
+                    docs = ingester.ingest(max_records=max_per_source)
 
                 if not docs:
                     results[source] = {"success": True, "count": 0, "s3_key": None}

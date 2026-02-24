@@ -137,7 +137,6 @@ class NVDReferenceScraperEnricher:
             "urls_skipped_media": urls_skipped_media,
         }
         logger.info(f"NVDReferenceScraper.enrich_cves summary: {summary}")
-        print(f"NVDReferenceScraper.enrich_cves summary: {summary}")
         return summary
 
     # ------------------------------------------------------------------

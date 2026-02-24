@@ -229,7 +229,7 @@ class RuleBasedEntityExtractor:
         result: List[Dict[str, Any]] = []
         for m in pattern.finditer(text):
             chunk_start = max(0, m.start() - 100)
-            chunk = text[chunk_start : m.end() + 1]
+            chunk = text[chunk_start : m.end()]
             if "://" in chunk:
                 url_start = chunk.rfind("://")
                 if url_start >= 0:

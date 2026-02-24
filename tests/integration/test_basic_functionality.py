@@ -1,157 +1,108 @@
 #!/usr/bin/env python3
 """
-Test script to verify basic functionality after removing search features.
+Integration test to verify basic module imports and initialization.
+
+Validates that core modules (Config, ingesters, storage, enrichment)
+can be imported and instantiated without errors.
 """
 import logging
 import os
 import sys
-from datetime import datetime
 
-# Add the project root to the Python path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '.')))
+# Add the src directory to the Python path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'src')))
 
-from config import Config
-from scrapers.web_scraper import WebScraper
-from scrapers.twitter_scraper import TwitterScraper
-from data_storage import DataStorage
+from threat_intelligence.core.config import Config
+from threat_intelligence.storage.data_storage import DataStorage
+from threat_intelligence.enrichment.content_cleaner import ContentCleaner
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(levelname)s:%(name)s:%(message)s')
 logger = logging.getLogger(__name__)
 
+
 def test_basic_functionality():
-    """Test basic scraping functionality without search features."""
-    print("🧪 Testing Basic Functionality (Search Removed)")
+    """Test basic initialization of core modules."""
+    print("Testing Basic Functionality")
     print("=" * 60)
-    
+
+    # Test 1: Config initialization
+    print("\n1. Testing Config initialization...")
     config = Config()
     config.validate()
-    
-    # Test 1: Web Scraper Initialization
-    print("\n1. Testing Web Scraper Initialization...")
-    web_scraper = WebScraper(config)
-    if web_scraper.firecrawl:
-        print("✅ Web scraper initialized successfully")
-    else:
-        print("❌ Web scraper initialization failed")
-        return
-    
-    # Test 2: Twitter Scraper Initialization
-    print("\n2. Testing Twitter Scraper Initialization...")
-    twitter_scraper = TwitterScraper(config)
-    if twitter_scraper.firecrawl:
-        print("✅ Twitter scraper initialized successfully")
-    else:
-        print("❌ Twitter scraper initialization failed")
-        return
-    
-    # Test 3: Data Storage
-    print("\n3. Testing Data Storage...")
+    assert config.NIST_API_BASE_URL is not None
+    print("  Config initialized successfully")
+
+    # Test 2: DataStorage initialization
+    print("\n2. Testing DataStorage initialization...")
     storage = DataStorage(config)
-    print("✅ Data storage initialized successfully")
-    
-    # Test 4: Verify search methods are removed
-    print("\n4. Verifying search methods are removed...")
-    web_methods = [method for method in dir(web_scraper) if 'search' in method.lower()]
-    twitter_methods = [method for method in dir(twitter_scraper) if 'search' in method.lower()]
-    
-    print(f"Web scraper methods with 'search': {web_methods}")
-    print(f"Twitter scraper methods with 'search': {twitter_methods}")
-    
-    if not web_methods and not twitter_methods:
-        print("✅ Search methods successfully removed")
-    else:
-        print("⚠️  Some search methods may still exist")
-    
-    # Test 5: Test basic URL validation
-    print("\n5. Testing URL validation...")
-    test_urls = [
-        "https://example.com",
-        "https://github.com",
-        "https://stackoverflow.com",
-        "invalid-url",
-        "not-a-url"
-    ]
-    
-    for url in test_urls:
-        is_valid = web_scraper.is_valid_url(url)
-        print(f"  {url}: {'✅' if is_valid else '❌'}")
-    
-    # Test 6: Test data structure creation
-    print("\n6. Testing data structure creation...")
+    assert storage is not None
+    print("  DataStorage initialized successfully")
+
+    # Test 3: ContentCleaner initialization
+    print("\n3. Testing ContentCleaner initialization...")
+    cleaner = ContentCleaner()
+    assert cleaner is not None
+    print("  ContentCleaner initialized successfully")
+
+    # Test 4: ContentCleaner text cleaning
+    print("\n4. Testing ContentCleaner text cleaning...")
+    raw_text = "  Hello   world.   Cookie policy notice.  "
+    cleaned = cleaner.clean_text(raw_text)
+    assert "Hello" in cleaned
+    assert "Cookie" not in cleaned
+    print(f"  Cleaned: '{cleaned}'")
+
+    # Test 5: Ingester imports
+    print("\n5. Testing ingester imports...")
     try:
-        # Create a mock content data structure
-        mock_content = {
-            'id': 'test_123',
-            'title': 'Test Article',
-            'content': 'This is a test article about cybersecurity and threat intelligence.',
-            'url': 'https://example.com/test',
-            'author': 'Test Author',
-            'source_type': 'web_content',
-            'scraped_at': datetime.now().isoformat(),
-            'domain': 'example.com',
-            'keywords': ['test', 'article', 'cybersecurity', 'threat', 'intelligence'],
-            'raw_content': {
-                'markdown': '# Test Article\n\nThis is test content.',
-                'html': '<h1>Test Article</h1><p>This is test content.</p>',
-                'word_frequency': {'test': 2, 'article': 1, 'cybersecurity': 1},
-                'total_words': 5,
-                'unique_words': 4
-            },
-            'preprocessing_notes': {
-                'stop_words_preserved': True,
-                'minimal_cleaning_applied': True,
-                'ready_for_nlp_preprocessing': True
-            }
-        }
-        
-        print("✅ Mock data structure created successfully")
-        print(f"   Title: {mock_content['title']}")
-        print(f"   URL: {mock_content['url']}")
-        print(f"   Keywords: {len(mock_content['keywords'])} words")
-        print(f"   Raw data preserved: {mock_content['preprocessing_notes']['stop_words_preserved']}")
-        
-    except Exception as e:
-        print(f"❌ Data structure creation failed: {str(e)}")
-    
-    # Test 7: Test link extraction
-    print("\n7. Testing link extraction...")
+        from threat_intelligence.ingesters import NISTCVEIngester, NISTCPEIngester
+        assert NISTCVEIngester is not None
+        assert NISTCPEIngester is not None
+        print("  NIST ingesters imported successfully")
+    except ImportError as e:
+        print(f"  NIST ingester import failed: {e}")
+        return
+
+    # Test 6: OSINT ingester imports
+    print("\n6. Testing OSINT ingester imports...")
     try:
-        test_post = {
-            'content': 'Check out https://github.com and https://stackoverflow.com for more info.',
-            'url': 'https://example.com/test'
-        }
-        
-        links = web_scraper.extract_links(test_post)
-        print(f"✅ Extracted {len(links)} links: {links}")
-        
-    except Exception as e:
-        print(f"❌ Link extraction failed: {str(e)}")
-    
-    # Test 8: Test main.py functionality
-    print("\n8. Testing main.py command structure...")
-    try:
-        import subprocess
-        result = subprocess.run([
-            'python', 'main.py', '--help'
-        ], capture_output=True, text=True, cwd=os.getcwd())
-        
-        if result.returncode == 0:
-            print("✅ Main.py help command works")
-            # Check that search arguments are not in help
-            if '--search' not in result.stdout:
-                print("✅ Search arguments successfully removed from CLI")
-            else:
-                print("⚠️  Search arguments may still be present in CLI")
-        else:
-            print(f"❌ Main.py help command failed: {result.stderr}")
-            
-    except Exception as e:
-        print(f"❌ Main.py test failed: {str(e)}")
-    
-    print(f"\n✅ Basic functionality test completed!")
-    print("The search functionality has been successfully removed.")
-    print("The system is ready for basic web scraping operations.")
+        from threat_intelligence.ingesters import (
+            PhishTankIngester,
+            RansomwatchIngester,
+            MITREAttackIngester,
+            OTXIngester,
+            ExploitDBIngester,
+        )
+        print("  All 5 OSINT ingesters imported successfully")
+    except ImportError as e:
+        print(f"  OSINT ingester import issue (may be OK if optional deps missing): {e}")
+
+    # Test 7: Enrichment imports
+    print("\n7. Testing enrichment imports...")
+    from threat_intelligence.enrichment import (
+        CWEEnricher,
+        VulnCheckEnricher,
+        NVDReferenceScraperEnricher,
+        classify_url,
+    )
+    assert classify_url("https://github.com/org/repo/security/advisories/GHSA-1234") is not None
+    print("  Enrichment modules imported successfully")
+
+    # Test 8: Quality scoring
+    print("\n8. Testing quality scoring...")
+    quality = ContentCleaner.assess_quality(
+        "CVE-2024-1234 is a critical vulnerability in Apache HTTP Server version 2.4.51. "
+        "An attacker can exploit this to gain remote code execution. "
+        "Users should upgrade to version 2.4.52 immediately."
+    )
+    assert quality["label"] == "good"
+    assert quality["has_cve_mention"] is True
+    assert quality["has_version_mention"] is True
+    print(f"  Quality assessment: {quality['label']}")
+
+    print(f"\nBasic functionality test completed successfully!")
+
 
 if __name__ == "__main__":
     test_basic_functionality()

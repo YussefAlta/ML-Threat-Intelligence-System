@@ -103,7 +103,7 @@ class MITREAttackIngester:
             if r.get('source_name') == 'mitre-attack':
                 mitre_ref = r
                 break
-        external_id = (mitre_ref or {}).get('external_id') or obj.get('id', '')[-8:]
+        external_id = (mitre_ref or {}).get('external_id') or (obj.get('id', '')[-8:] if obj.get('id') else 'unknown')
         url = (mitre_ref or {}).get('url') or ''
 
         techniques = []

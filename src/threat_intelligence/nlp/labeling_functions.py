@@ -160,6 +160,8 @@ _IOC_KEYWORDS = [
     r"\bbeacon\b",
     r"\bcallback\b",
     r"\binfrastructure\b",
+    r"\bmalicious (?:domain|url|ip)\b",
+    r"\bbotnet\b",
 ]
 _RE_IOC = [re.compile(kw, re.IGNORECASE) for kw in _IOC_KEYWORDS]
 
@@ -269,8 +271,8 @@ def lf_ioc_keywords(text: str, title: str, metadata: dict) -> int:
 
 
 def lf_ioc_source(text: str, title: str, metadata: dict) -> int:
-    """Returns IOC if source is otx, else ABSTAIN."""
-    return IOC if metadata.get("source") == "otx" else ABSTAIN
+    """Returns IOC if source is a known IOC feed, else ABSTAIN."""
+    return IOC if metadata.get("source") in ("otx", "threatfox") else ABSTAIN
 
 
 def get_all_labeling_functions() -> List[Callable]:
@@ -303,7 +305,7 @@ def apply_labeling_functions(doc: dict) -> Dict[str, List[int]]:
     """
     content = doc.get("content", "")
     title = doc.get("title", "")
-    metadata = doc.get("metadata", {})
+    metadata = {**doc.get("metadata", {}), "source": doc.get("source", "")}
 
     votes: Dict[str, List[int]] = {
         LABEL_NAMES[VULNERABILITY]: [],

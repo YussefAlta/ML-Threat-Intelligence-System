@@ -61,10 +61,6 @@ def main():
         )
         return 1
 
-    if not sample_cves:
-        logger.error("No CVEs available; cannot run enrichment test")
-        return 1
-
     # 2) Run enrichment
     logger.info(f"Starting enrichment for {len(sample_cves)} CVEs...")
     logger.info("This may take a few minutes due to API rate limiting.")

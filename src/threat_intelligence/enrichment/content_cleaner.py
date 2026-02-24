@@ -60,7 +60,7 @@ _CODE_LINE_RE = re.compile(
     r"(?:def|class|import|from|return|if|else|for|while|try|except|raise|with|var|let|const|function)\s)",
 )
 
-CVE_MENTION_RE = re.compile(r"CVE-\d{4}-\d{4,}")
+CVE_MENTION_RE = re.compile(r"CVE-\d{4}-\d{4,}", re.IGNORECASE)
 VERSION_RE = re.compile(
     r"(?:version|v)?\s*\d+\.\d+(?:\.\d+)*(?:[-._]?\w+)?",
     re.IGNORECASE,
@@ -151,10 +151,10 @@ class ContentCleaner:
             break_point = last_newline if last_newline > size // 2 else last_period
             if break_point <= 0:
                 break_point = size
-            chunk = remaining[: break_point + 1].strip()
+            chunk = remaining[:break_point].strip()
             if chunk:
                 chunks.append(chunk)
-            remaining = remaining[break_point + 1 :].strip()
+            remaining = remaining[break_point:].lstrip("\n. ").strip()
         return chunks
 
     # ------------------------------------------------------------------

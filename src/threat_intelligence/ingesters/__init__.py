@@ -17,15 +17,17 @@ try:
     from .phishtank_ingester import PhishTankIngester
     from .ransomwatch_ingester import RansomwatchIngester
     from .mitre_attack_ingester import MITREAttackIngester
-    from .otx_ingester import OTXIngester
     from .exploitdb_ingester import ExploitDBIngester
+    from .threatfox_ingester import ThreatFoxIngester
+    from .cisa_kev_ingester import CISAKEVIngester
 
     __all__ += [
         'PhishTankIngester',
         'RansomwatchIngester',
         'MITREAttackIngester',
-        'OTXIngester',
         'ExploitDBIngester',
+        'ThreatFoxIngester',
+        'CISAKEVIngester',
     ]
 except ImportError:
     pass

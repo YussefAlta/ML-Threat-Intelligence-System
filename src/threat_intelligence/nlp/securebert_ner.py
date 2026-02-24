@@ -29,6 +29,33 @@ ENTITY_GROUP_MAP = {
 
 CHARS_PER_TOKEN_APPROX = 4
 
+# Minimum confidence score for NER entities
+NER_CONFIDENCE_THRESHOLD = 0.70
+
+# Minimum character length for a valid entity
+NER_MIN_ENTITY_LENGTH = 4
+
+# Values that are never valid entities (common NER noise)
+_NOISE_VALUES = frozenset({
+    # Punctuation
+    ".", ",", "-", ";", ":", "(", ")", "[", "]", "{", "}", "/", "\\",
+    "|", "_", "](", "=", "+", "*", "#", "@", "!", "?", "'", '"',
+    # Stop words
+    "the", "that", "this", "with", "from", "for", "and", "but", "not",
+    "are", "was", "were", "been", "have", "has", "had", "will", "would",
+    "can", "could", "may", "might", "shall", "should", "its", "their",
+    "which", "when", "where", "what", "some", "also", "into", "over",
+    # Sub-word fragments
+    "ing", "tion", "ware", "ment", "ness", "ity", "ous", "ble",
+    "xml.", "xml", "org", "com", "net", "oit", "expl",
+    # Generic nouns NER misclassifies as entities
+    "malware", "exploit", "tools", "system", "cloud", "cloud services",
+    "industries", "organizations", "entities", "victims", "customer",
+    "products", "versions", "open", "account", "product",
+    "government sectors", "government entities", "remote access tools",
+    "associated malware", "find", "triage",
+})
+
 
 def _get_config_max_tokens(config: Optional["Config"] = None) -> int:
     if config is not None:
@@ -104,6 +131,39 @@ class SecureBERTNERExtractor:
     def _normalize_type(self, entity_group: str) -> str:
         return ENTITY_GROUP_MAP.get(entity_group, entity_group.lower())
 
+    def _merge_adjacent(self, entities: List[Dict[str, Any]], text: str) -> List[Dict[str, Any]]:
+        """
+        Merge adjacent entities of the same type with contiguous spans.
+
+        Some NER models tag every sub-word token as B- instead of I-,
+        producing fragments like ("C", "VE", "-", "2024") instead of
+        "CVE-2024-1234". This method stitches them back together.
+        """
+        if not entities:
+            return entities
+
+        sorted_ents = sorted(entities, key=lambda e: e.get("start", 0))
+        merged: List[Dict[str, Any]] = [dict(sorted_ents[0])]
+
+        for ent in sorted_ents[1:]:
+            prev = merged[-1]
+            gap = ent["start"] - prev["end"]
+            same_type = ent["type"] == prev["type"]
+
+            if same_type and gap <= 0:
+                # Contiguous or overlapping — merge
+                prev["value"] = text[prev["start"]:ent["end"]].strip()
+                prev["end"] = ent["end"]
+                prev["score"] = max(prev.get("score", 0), ent.get("score", 0))
+            else:
+                merged.append(dict(ent))
+
+        # Clean up leading/trailing whitespace in values
+        for e in merged:
+            e["value"] = e["value"].strip()
+
+        return [e for e in merged if e["value"]]
+
     def _dedupe_entities(self, entities: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         best: Dict[tuple, Dict[str, Any]] = {}
         for e in entities:
@@ -143,7 +203,7 @@ class SecureBERTNERExtractor:
         for item in raw:
             entity_group = item.get("entity_group", item.get("entity", ""))
             score = float(item.get("score", 0.0))
-            if score < 0.5:
+            if score < NER_CONFIDENCE_THRESHOLD:
                 continue
 
             normalized_type = self._normalize_type(entity_group)
@@ -163,7 +223,26 @@ class SecureBERTNERExtractor:
                 "method": "securebert_ner",
             })
 
+        entities = self._merge_adjacent(entities, truncated)
+        entities = self._filter_noise(entities)
         return self._dedupe_entities(entities)
+
+    @staticmethod
+    def _filter_noise(entities: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Remove sub-word fragments, punctuation, and common stop words."""
+        filtered: List[Dict[str, Any]] = []
+        for e in entities:
+            value = e.get("value", "").strip().rstrip(".")
+            if len(value) < NER_MIN_ENTITY_LENGTH:
+                continue
+            if value.lower() in _NOISE_VALUES:
+                continue
+            # Skip if all punctuation/digits
+            if not any(c.isalpha() for c in value):
+                continue
+            e["value"] = value
+            filtered.append(e)
+        return filtered
 
     def extract_entity_summary(self, text: str) -> Dict[str, Any]:
         """

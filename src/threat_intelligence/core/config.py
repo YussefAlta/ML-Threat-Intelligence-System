@@ -95,6 +95,12 @@ class Config:
     EXPLOITDB_RATE_LIMIT_REQUESTS = int(os.getenv('EXPLOITDB_RATE_LIMIT_REQUESTS', '5'))
     EXPLOITDB_RATE_LIMIT_WINDOW = int(os.getenv('EXPLOITDB_RATE_LIMIT_WINDOW', '60'))
 
+    # ThreatFox (Abuse.ch) Configuration
+    THREATFOX_EXPORT_URL = os.getenv('THREATFOX_EXPORT_URL', 'https://threatfox.abuse.ch/export/json/recent/')
+
+    # CISA KEV Configuration
+    CISA_KEV_URL = os.getenv('CISA_KEV_URL', 'https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json')
+
     # NLP Configuration
     NLP_ENRICHED_S3_PREFIX = os.getenv('NLP_ENRICHED_S3_PREFIX', 'nlp/enriched')
     SECUREBERT_MODEL_NAME = os.getenv('SECUREBERT_MODEL_NAME', 'cisco-ai/SecureBERT2.0-base')
