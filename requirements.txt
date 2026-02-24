@@ -1,27 +1,31 @@
+# Core
 requests>=2.31.0
-beautifulsoup4>=4.12.0
-python-dotenv>=1.0.0
-boto3>=1.34.0
-pandas>=2.0.0
-lxml>=4.9.0
 urllib3>=2.0.0
+python-dotenv>=1.0.0
+
+# AWS
+boto3>=1.34.0
+
+# Data processing
+pandas>=2.0.0
+
+# Content extraction and cleaning
+beautifulsoup4>=4.12.0
+lxml>=4.9.0
 langdetect>=1.0.9
 PyPDF2>=3.0.0
 charset-normalizer>=3.0.0
 
-# OSINT Source Collection
+# OSINT source collection
 feedparser>=6.0.0
 
-# NLP / ML
+# NLP / ML (SecureBERT 2.0 NER)
 transformers>=4.40.0
 torch>=2.0.0
 tokenizers>=0.19.0
 
-# Weak supervision
-snorkel>=0.9.9
-
 # Entity extraction
 regex>=2023.0.0
 
-# Tokenization
-spacy>=3.7.0
+# Testing
+pytest>=8.0.0
