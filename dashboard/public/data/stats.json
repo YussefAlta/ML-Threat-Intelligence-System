@@ -1,0 +1,482 @@
+{
+  "total_documents": 10000,
+  "docs_labeled": 9979,
+  "docs_unlabeled": 21,
+  "multi_label_docs": 148,
+  "total_entities": 20332,
+  "total_relations": 0,
+  "avg_entities_per_doc": 2.0,
+  "sources": [
+    {
+      "name": "exploitdb",
+      "count": 5940
+    },
+    {
+      "name": "ransomwatch",
+      "count": 2000
+    },
+    {
+      "name": "cisa_kev",
+      "count": 1527
+    },
+    {
+      "name": "nvd_ref",
+      "count": 200
+    },
+    {
+      "name": "mitre_attack",
+      "count": 181
+    },
+    {
+      "name": "phishtank",
+      "count": 100
+    },
+    {
+      "name": "threatfox",
+      "count": 52
+    }
+  ],
+  "labels": [
+    {
+      "name": "exploit",
+      "count": 6064,
+      "avg_confidence": 0.598
+    },
+    {
+      "name": "ransomware",
+      "count": 2030,
+      "avg_confidence": 0.397
+    },
+    {
+      "name": "vulnerability",
+      "count": 1727,
+      "avg_confidence": 0.376
+    },
+    {
+      "name": "threat_actor",
+      "count": 163,
+      "avg_confidence": 0.485
+    },
+    {
+      "name": "phishing",
+      "count": 103,
+      "avg_confidence": 0.5
+    },
+    {
+      "name": "ioc",
+      "count": 45,
+      "avg_confidence": 0.678
+    }
+  ],
+  "risk_tiers": [
+    {
+      "name": "critical",
+      "count": 106
+    },
+    {
+      "name": "high",
+      "count": 9436
+    },
+    {
+      "name": "medium",
+      "count": 207
+    },
+    {
+      "name": "low",
+      "count": 251
+    }
+  ],
+  "entity_types": [
+    {
+      "name": "url",
+      "count": 13826
+    },
+    {
+      "name": "ipv6",
+      "count": 2000
+    },
+    {
+      "name": "cve_id",
+      "count": 1824
+    },
+    {
+      "name": "domain",
+      "count": 1278
+    },
+    {
+      "name": "ipv4",
+      "count": 788
+    },
+    {
+      "name": "cvss_score",
+      "count": 586
+    },
+    {
+      "name": "email",
+      "count": 27
+    },
+    {
+      "name": "sha1",
+      "count": 2
+    },
+    {
+      "name": "sha256",
+      "count": 1
+    }
+  ],
+  "relation_types": [],
+  "top_cves": [
+    {
+      "value": "CVE-2025-49704",
+      "count": 3
+    },
+    {
+      "value": "CVE-2023-46805",
+      "count": 3
+    },
+    {
+      "value": "CVE-2024-21887",
+      "count": 3
+    },
+    {
+      "value": "CVE-2022-41082",
+      "count": 3
+    },
+    {
+      "value": "CVE-2021-25337",
+      "count": 3
+    },
+    {
+      "value": "CVE-2021-25369",
+      "count": 3
+    },
+    {
+      "value": "CVE-2021-25370",
+      "count": 3
+    },
+    {
+      "value": "CVE-2019-2215",
+      "count": 3
+    },
+    {
+      "value": "CVE-2020-0041",
+      "count": 3
+    },
+    {
+      "value": "CVE-2020-0069",
+      "count": 3
+    },
+    {
+      "value": "CVE-2021-20021",
+      "count": 3
+    },
+    {
+      "value": "CVE-2021-20022",
+      "count": 3
+    },
+    {
+      "value": "CVE-2021-20023",
+      "count": 3
+    },
+    {
+      "value": "CVE-2025-12480",
+      "count": 2
+    },
+    {
+      "value": "CVE-2025-20362",
+      "count": 2
+    },
+    {
+      "value": "CVE-2025-20333",
+      "count": 2
+    },
+    {
+      "value": "CVE-2025-49706",
+      "count": 2
+    },
+    {
+      "value": "CVE-2025-53770",
+      "count": 2
+    },
+    {
+      "value": "CVE-2025-53771",
+      "count": 2
+    },
+    {
+      "value": "CVE-2024-58136",
+      "count": 2
+    }
+  ],
+  "top_ips": [
+    {
+      "value": "23:46:54",
+      "count": 170
+    },
+    {
+      "value": "23:46:56",
+      "count": 140
+    },
+    {
+      "value": "23:46:55",
+      "count": 134
+    },
+    {
+      "value": "23:46:57",
+      "count": 90
+    },
+    {
+      "value": "00:00:00",
+      "count": 89
+    },
+    {
+      "value": "00:40:42",
+      "count": 78
+    },
+    {
+      "value": "23:46:58",
+      "count": 54
+    },
+    {
+      "value": "18:46:35",
+      "count": 37
+    },
+    {
+      "value": "16:06:44",
+      "count": 35
+    },
+    {
+      "value": "15:31:01",
+      "count": 31
+    },
+    {
+      "value": "12:20:28",
+      "count": 25
+    },
+    {
+      "value": "16:52:32",
+      "count": 20
+    },
+    {
+      "value": "09:45:12",
+      "count": 17
+    },
+    {
+      "value": "16:06:45",
+      "count": 17
+    },
+    {
+      "value": "07:33:07",
+      "count": 15
+    },
+    {
+      "value": "18:46:34",
+      "count": 15
+    },
+    {
+      "value": "15:22:29",
+      "count": 15
+    },
+    {
+      "value": "15:22:28",
+      "count": 14
+    },
+    {
+      "value": "23:46:53",
+      "count": 12
+    },
+    {
+      "value": "10:09:06",
+      "count": 12
+    }
+  ],
+  "top_domains": [
+    {
+      "value": "contirecj4hbzmyzuydyzrvm2c65blmvhoj2cvf25zqj2dwrrqcq5oad.onion",
+      "count": 184
+    },
+    {
+      "value": "apple.com",
+      "count": 45
+    },
+    {
+      "value": "googleblog.com",
+      "count": 37
+    },
+    {
+      "value": "ecdmr42axxx.onion",
+      "count": 34
+    },
+    {
+      "value": "supp24maprinktc7uizgfyqhisx7lkszb6ogh6lwdzpac23w3mh4tvyd.onion",
+      "count": 31
+    },
+    {
+      "value": "ihoqnxnvdwybrv6kiteiesjc3ic6du6axtv3arouxr6ddswrxa2wrbyd.onion",
+      "count": 24
+    },
+    {
+      "value": "woe2suafeg6ehxivgvvn4nh6ectbdhdqgc4vzph27mmyn7rjf2c52jid.onion",
+      "count": 21
+    },
+    {
+      "value": "trac.wordpress.org",
+      "count": 18
+    },
+    {
+      "value": "fireeye62c3da3fnosymmmcqcty7rl7cjucpbkzaz275a4qs5fgkzhad.onion",
+      "count": 18
+    },
+    {
+      "value": "samsungmobile.com",
+      "count": 13
+    },
+    {
+      "value": "us.dlink.com",
+      "count": 12
+    },
+    {
+      "value": "paloaltonetworks.com",
+      "count": 11
+    },
+    {
+      "value": "7eid.onion",
+      "count": 11
+    },
+    {
+      "value": "broadcom.com",
+      "count": 10
+    },
+    {
+      "value": "citrix.com",
+      "count": 10
+    },
+    {
+      "value": "fortinet.com",
+      "count": 9
+    },
+    {
+      "value": "juniper.net",
+      "count": 7
+    },
+    {
+      "value": "redhat.com",
+      "count": 6
+    },
+    {
+      "value": "mobile.com",
+      "count": 6
+    },
+    {
+      "value": "ASP.NET",
+      "count": 6
+    }
+  ],
+  "top_malware": [],
+  "top_organizations": [],
+  "evaluation": {
+    "classification_macro_f1": 0.94,
+    "ner_macro_f1": 0.7,
+    "classification_per_category": [
+      {
+        "name": "vulnerability",
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 59
+      },
+      {
+        "name": "exploit",
+        "precision": 0.79,
+        "recall": 0.76,
+        "f1": 0.78,
+        "support": 66
+      },
+      {
+        "name": "phishing",
+        "precision": 0.98,
+        "recall": 0.98,
+        "f1": 0.98,
+        "support": 50
+      },
+      {
+        "name": "ransomware",
+        "precision": 0.98,
+        "recall": 0.98,
+        "f1": 0.98,
+        "support": 52
+      },
+      {
+        "name": "threat_actor",
+        "precision": 1.0,
+        "recall": 0.9,
+        "f1": 0.95,
+        "support": 51
+      },
+      {
+        "name": "ioc",
+        "precision": 1.0,
+        "recall": 0.88,
+        "f1": 0.94,
+        "support": 50
+      }
+    ],
+    "ner_per_type": [
+      {
+        "name": "ipv4",
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 229
+      },
+      {
+        "name": "cve_id",
+        "precision": 1.0,
+        "recall": 0.97,
+        "f1": 0.98,
+        "support": 62
+      },
+      {
+        "name": "indicator",
+        "precision": 0.82,
+        "recall": 1.0,
+        "f1": 0.9,
+        "support": 49
+      },
+      {
+        "name": "cvss_score",
+        "precision": 0.75,
+        "recall": 1.0,
+        "f1": 0.85,
+        "support": 103
+      },
+      {
+        "name": "domain",
+        "precision": 0.8,
+        "recall": 0.79,
+        "f1": 0.79,
+        "support": 140
+      },
+      {
+        "name": "malware",
+        "precision": 0.68,
+        "recall": 0.47,
+        "f1": 0.56,
+        "support": 381
+      },
+      {
+        "name": "organization",
+        "precision": 0.39,
+        "recall": 0.2,
+        "f1": 0.26,
+        "support": 544
+      },
+      {
+        "name": "system",
+        "precision": 0.4,
+        "recall": 0.19,
+        "f1": 0.26,
+        "support": 456
+      }
+    ]
+  }
+}
