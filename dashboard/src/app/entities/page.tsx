@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search, ChevronLeft, ChevronRight, Loader2, Database,
@@ -239,7 +239,7 @@ export default function EntitiesPage() {
                   const topLabels = Array.from(ent.labels).slice(0, 3);
 
                   return (
-                    <tbody key={key + i}>
+                    <React.Fragment key={key + i}>
                       <tr
                         className={`cursor-pointer transition-colors ${isExpanded ? 'bg-slate-700/40' : i % 2 === 0 ? 'bg-slate-800/30 hover:bg-slate-700/20' : 'bg-slate-800/60 hover:bg-slate-700/20'}`}
                         onClick={() => setExpandedEntity(isExpanded ? null : key)}
@@ -398,7 +398,7 @@ export default function EntitiesPage() {
                           </tr>
                         )}
                       </AnimatePresence>
-                    </tbody>
+                    </React.Fragment>
                   );
                 })}
                 {pageData.length === 0 && (
