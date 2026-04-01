@@ -3,16 +3,21 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  Home,
+  LayoutDashboard,
   Shield,
   BarChart3,
   Network,
   FlaskConical,
   ShieldAlert,
+  Bell,
+  Share2,
 } from "lucide-react";
+import { useIntelligence } from "@/context/IntelligenceContext";
 
 const navItems = [
-  { href: "/", label: "Home", icon: Home },
+  { href: "/overview", label: "Command center", icon: LayoutDashboard },
+  { href: "/graph", label: "Entity graph", icon: Share2 },
+  { href: "/alerts", label: "Alerts", icon: Bell, showBadge: true },
   { href: "/threats", label: "Threats", icon: ShieldAlert },
   { href: "/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/entities", label: "Entities", icon: Network },
@@ -21,6 +26,7 @@ const navItems = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { activeAlertCount } = useIntelligence();
 
   return (
     <aside className="fixed left-0 top-0 h-screen w-64 bg-slate-900 border-r border-slate-800/50 flex flex-col z-50">
@@ -44,8 +50,14 @@ export function Sidebar() {
       {/* Navigation */}
       <nav className="flex-1 p-4 space-y-1">
         {navItems.map((item) => {
-          const isActive = pathname === item.href;
+          const isActive =
+            pathname === item.href ||
+            (item.href === "/overview" && pathname === "/");
           const Icon = item.icon;
+          const showBadge =
+            "showBadge" in item &&
+            item.showBadge &&
+            activeAlertCount > 0;
 
           return (
             <Link
@@ -64,9 +76,14 @@ export function Sidebar() {
                     : "text-slate-500 group-hover:text-slate-300"
                 }`}
               />
-              {item.label}
-              {isActive && (
-                <div className="ml-auto w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-[0_0_6px_rgba(6,182,212,0.6)]" />
+              <span className="flex-1">{item.label}</span>
+              {showBadge && (
+                <span className="text-[10px] font-bold min-w-[1.25rem] h-5 px-1 rounded-full bg-amber-500/25 text-amber-400 border border-amber-500/40 flex items-center justify-center">
+                  {activeAlertCount > 99 ? "99+" : activeAlertCount}
+                </span>
+              )}
+              {isActive && !showBadge && (
+                <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-[0_0_6px_rgba(6,182,212,0.6)]" />
               )}
             </Link>
           );

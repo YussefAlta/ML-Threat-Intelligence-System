@@ -71,6 +71,40 @@ class NLPEnricher:
             except Exception as e:
                 logger.warning("SecureBERT NER not available, using regex-only entities: %s", e)
 
+    @staticmethod
+    def _trim_metadata_for_dashboard(meta: Any) -> Optional[Dict[str, Any]]:
+        """Keep a small provenance/metadata slice for dashboards (no full raw blob)."""
+        if not isinstance(meta, dict):
+            return None
+        slim: Dict[str, Any] = {}
+        if meta.get("cve_id"):
+            slim["cve_id"] = meta["cve_id"]
+        cvss = meta.get("cvss")
+        if isinstance(cvss, dict):
+            slim_cvss = {
+                k: cvss[k]
+                for k in ("score", "severity", "vector", "exploitability_score", "impact_score")
+                if k in cvss
+            }
+            if slim_cvss:
+                slim["cvss"] = slim_cvss
+        cwes = meta.get("cwe_ids")
+        if isinstance(cwes, list) and cwes:
+            slim["cwe_ids"] = cwes[:20]
+        return slim or None
+
+    def _provenance_from_source(self, doc: Dict) -> Dict[str, Any]:
+        """Copy corpus provenance fields into enriched output."""
+        out: Dict[str, Any] = {}
+        for key in ("published_at", "collected_at", "url"):
+            val = doc.get(key)
+            if val is not None and val != "":
+                out[key] = val
+        meta = self._trim_metadata_for_dashboard(doc.get("metadata"))
+        if meta:
+            out["metadata"] = meta
+        return out
+
     def enrich_document(self, doc: Dict) -> Dict:
         """
         Run full NLP enrichment on a single document.
@@ -112,7 +146,7 @@ class NLPEnricher:
         # Risk scoring
         risk_result = self._risk_scorer.score_document(labels, rule_summary, text)
 
-        return {
+        base = {
             "id": doc["id"],
             "source": doc.get("source"),
             "title": doc.get("title"),
@@ -132,6 +166,8 @@ class NLPEnricher:
                 "risk_scoring": "rule_based_v1",
             },
         }
+        base.update(self._provenance_from_source(doc))
+        return base
 
     def enrich_corpus(
         self,

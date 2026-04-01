@@ -13,6 +13,7 @@ import os
 import sys
 import glob
 from collections import Counter, defaultdict
+from datetime import date, datetime, timedelta
 
 def find_latest_enriched():
     pattern = os.path.join("data", "processed", "nlp_enriched_*.jsonl")
@@ -37,6 +38,172 @@ def slim_doc(doc):
         es.pop("entities", None)
         slimmed["entity_summary"] = es
     return slimmed
+
+
+def _parse_day(ts):
+    """Parse ISO timestamp to YYYY-MM-DD, or None."""
+    if not ts or not isinstance(ts, str):
+        return None
+    s = ts.strip().replace("Z", "+00:00")
+    try:
+        if len(s) == 10 and s[4] == "-" and s[7] == "-":
+            return s
+        dt = datetime.fromisoformat(s)
+        return dt.date().isoformat()
+    except ValueError:
+        return None
+
+
+def doc_day(doc):
+    """Prefer collection/publication time for trends; fallback enriched_at."""
+    return (
+        _parse_day(doc.get("collected_at"))
+        or _parse_day(doc.get("published_at"))
+        or _parse_day(doc.get("enriched_at"))
+    )
+
+
+def compute_trends(docs, max_days=90):
+    """Time-bucketed counts for dashboard charts."""
+    day_counts = Counter()
+    day_source = defaultdict(Counter)
+    day_risk = defaultdict(Counter)
+
+    for doc in docs:
+        d = doc_day(doc)
+        if not d:
+            continue
+        day_counts[d] += 1
+        day_source[d][doc.get("source", "unknown")] += 1
+        ra = doc.get("risk_assessment") or {}
+        day_risk[d][ra.get("risk_tier", "unknown")] += 1
+
+    if not day_counts:
+        return {
+            "documents_by_day": [],
+            "by_source_by_day": [],
+            "by_risk_by_day": [],
+            "window_days": max_days,
+        }
+
+    last_day = max(day_counts.keys())
+    cutoff = (date.fromisoformat(last_day) - timedelta(days=max_days)).isoformat()
+    window_days = sorted(d for d in day_counts if d >= cutoff)
+
+    documents_by_day = [{"day": d, "count": day_counts[d]} for d in window_days]
+
+    top_sources = [n for n, _ in Counter(doc.get("source", "unknown") for doc in docs).most_common(7)]
+    by_source_by_day = []
+    for d in window_days:
+        row = {"day": d}
+        for s in top_sources:
+            row[s] = day_source[d].get(s, 0)
+        by_source_by_day.append(row)
+
+    risk_order = ["critical", "high", "medium", "low"]
+    by_risk_by_day = []
+    for d in window_days:
+        row = {"day": d}
+        for r in risk_order:
+            row[r] = day_risk[d].get(r, 0)
+        by_risk_by_day.append(row)
+
+    return {
+        "documents_by_day": documents_by_day,
+        "by_source_by_day": by_source_by_day,
+        "by_risk_by_day": by_risk_by_day,
+        "window_days": max_days,
+    }
+
+
+CO_OCC_TYPES = frozenset({"cve_id", "domain", "malware", "organization", "ipv4", "ipv6"})
+GRAPH_DOC_CAP = 150
+GRAPH_MAX_NODES = 200
+GRAPH_MAX_EDGES = 400
+
+
+def build_graph_sample(docs):
+    """Capped entity/relation graph from high-risk docs (relations + co-occurrence fallback)."""
+    scored = []
+    for d in docs:
+        ra = d.get("risk_assessment") or {}
+        scored.append((float(ra.get("risk_score") or 0), d))
+    scored.sort(key=lambda x: -x[0])
+    sample_docs = [d for _, d in scored[:GRAPH_DOC_CAP]]
+
+    nodes = {}
+    edges = []
+    edge_seen = set()
+
+    def node_id(raw, etype, doc_id):
+        return f"{etype}:{raw}"[:240]
+
+    def add_node(nid, label, ntype):
+        if nid in nodes or len(nodes) >= GRAPH_MAX_NODES:
+            return
+        nodes[nid] = {"id": nid, "label": (label or "")[:200], "type": ntype}
+
+    def add_edge(a, b, rel_type, doc_id):
+        if a == b or not a or not b:
+            return
+        key = (a, b, rel_type) if a < b else (b, a, rel_type)
+        if key in edge_seen or len(edges) >= GRAPH_MAX_EDGES:
+            return
+        edge_seen.add(key)
+        edges.append(
+            {"source": a, "target": b, "relation_type": rel_type, "doc_id": doc_id}
+        )
+
+    for doc in sample_docs:
+        doc_id = doc.get("id", "")
+        for rel in doc.get("relations") or []:
+            s, t = rel.get("source"), rel.get("target")
+            if not s or not t:
+                continue
+            sid = node_id(str(s), "mention", doc_id)
+            tid = node_id(str(t), "mention", doc_id)
+            add_node(sid, str(s), "relation_endpoint")
+            add_node(tid, str(t), "relation_endpoint")
+            add_edge(sid, tid, rel.get("type", "related"), doc_id)
+            if len(edges) >= GRAPH_MAX_EDGES:
+                break
+
+        if len(edges) >= GRAPH_MAX_EDGES:
+            break
+
+        # Co-occurrence fallback: link key entity types within the same document
+        ents = doc.get("entities") or []
+        key_ents = []
+        for e in ents:
+            et = e.get("type", "")
+            if et not in CO_OCC_TYPES:
+                continue
+            raw = (e.get("canonical_value") or e.get("value") or "").strip()
+            if raw:
+                key_ents.append((et, raw))
+        per_doc_cap = 15
+        key_ents = key_ents[:per_doc_cap]
+        for i, (t1, v1) in enumerate(key_ents):
+            for t2, v2 in key_ents[i + 1 :]:
+                if v1 == v2 and t1 == t2:
+                    continue
+                nid1 = node_id(v1, t1, "")
+                nid2 = node_id(v2, t2, "")
+                add_node(nid1, v1, t1)
+                add_node(nid2, v2, t2)
+                add_edge(nid1, nid2, "co_occurs", doc_id)
+                if len(edges) >= GRAPH_MAX_EDGES:
+                    break
+            if len(edges) >= GRAPH_MAX_EDGES:
+                break
+
+    truncated = len(edges) >= GRAPH_MAX_EDGES or len(nodes) >= GRAPH_MAX_NODES
+    return {
+        "nodes": list(nodes.values()),
+        "edges": edges,
+        "truncated": truncated,
+        "doc_sample_size": len(sample_docs),
+    }
 
 def compute_stats(docs):
     source_counts = Counter()
@@ -156,6 +323,7 @@ def main():
 
     # Compute stats
     stats = compute_stats(docs)
+    stats["trends"] = compute_trends(docs, max_days=90)
 
     # Slim documents
     slimmed = [slim_doc(d) for d in docs]
@@ -173,6 +341,12 @@ def main():
     with open(stats_out, "w") as f:
         json.dump(stats, f, ensure_ascii=False, indent=2)
     print(f"Wrote {stats_out}")
+
+    graph_sample = build_graph_sample(docs)
+    graph_out = os.path.join(out_dir, "graph_sample.json")
+    with open(graph_out, "w") as f:
+        json.dump(graph_sample, f, ensure_ascii=False, indent=2)
+    print(f"Wrote {graph_out} ({len(graph_sample['nodes'])} nodes, {len(graph_sample['edges'])} edges)")
 
     return 0
 

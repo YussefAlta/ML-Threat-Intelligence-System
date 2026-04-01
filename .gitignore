@@ -10,8 +10,9 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
-lib64/
+# Root-only Python build dirs (do not use bare "lib/" — it would ignore dashboard/src/lib.)
+/lib/
+/lib64/
 parts/
 sdist/
 var/
