@@ -50,4 +50,4 @@ Rewriting history does not revoke a credential. Once a secret reaches a
 public remote, rotation at the provider is the only real fix; the git
 cleanup is hygiene. Revoke first, scrub second.
 
-See [[config-and-secrets]] for how keys are loaded at runtime.
+See [[config-and-secrets]] for how keys are loaded at runtime, and [[index]] for the vault map.
